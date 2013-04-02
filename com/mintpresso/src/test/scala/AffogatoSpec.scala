@@ -13,7 +13,7 @@ class AffogatoSpec extends Specification {
 
       val affogato = new Affogato(apiKey)
 
-      affogato.set("user", identifier="admire9@gmail.com", data="") === true
+      affogato.set(_type="user", identifier="admire9@gmail.com") === true
     }
 
     "Get Point" in {
