@@ -17,12 +17,45 @@ package com.mintpresso
 import dispatch._
 
 /** Affogato is a Mintpresso Scala API Pack.
+ */ 
+object Affogato {
+  val separator = "::"
+  
+  def apply(token: String, accountId: Long): Affogato = new Affogato(token, accountId)
+
+  /** Overloaded constructor
+   *
+   * @constructor Create a new affogato
+   * @param key a key combined api token and accountId (eg. asdf02309::1)
+   * @return A instance of Affogato
+   *
+   * {{{
+   * scala> import com.mintpresso._
+   * scala> val affogato: Affogato = new Affogato("cc55223dfasfe29fs1::1") 
+   * affogato: com.mintpresso.Affogato = com.mintpresso.Affogato
+   * }}}
+   *
+   */
+  def apply(key: String): Affogato = {
+    val splitedKey: Array[String] = key.split(separator)
+    new Affogato(splitedKey(0), splitedKey(1).toLong)
+  }
+}
+
+/** Affogato class
+ *
+ * {{{
+ * scala> import com.mintpresso._
+ * scala> val affogato: Affogato = new Affogato("cc55223dfasfe29fs", 1) 
+ * affogato: com.mintpresso.Affogato = com.mintpresso.Affogato
+ * }}}
  *
  * @constructor Create a new affogato with api key
- * @param key mintpresso api key
+ * @param token mintpresso api key
+ * @param accountId mintpresso account id
  * @return A instance of Affogato
  */
-class Affogato(key: String) {
+class Affogato(val token: String, val accountId: Long) {
   /** Add a point to mintpresso
    *
    * {{{
