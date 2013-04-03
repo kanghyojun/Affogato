@@ -15,6 +15,7 @@ package com.mintpresso
   */
 
 import dispatch._
+import net.liftweb.json._
 
 /** Affogato is a Mintpresso Scala API Pack.
  */ 
@@ -70,7 +71,9 @@ class Affogato(val token: String, val accountId: Long) {
    * @return a value whether request is successfully ended or not
    *
    */
-  def set(_type: String, identifier: String, data: String = ""): Boolean = {
+  def set(_type: String, identifier: String, data: String = "{}"): Boolean = {
+    val parsedData = parse(data)
+    if(parsedData == JNothing) throw new AffogatoInvalidJsonException("A point data is invalid. data: String = %s".format(data))
     true
   }
 
@@ -112,4 +115,16 @@ class Affogato(val token: String, val accountId: Long) {
   }
 
   override def toString(): String = "Affogato(%1$s, %2$s)".format(token , accountId)
+}
+
+
+/** Invalid Json Exception Class
+ *
+ */
+class AffogatoInvalidJsonException(message: String, nestedException: Throwable) extends Exception(message, nestedException) {
+    def this() = this("", null)
+     
+    def this(message: String) = this(message, null)
+     
+    def this(nestedException : Throwable) = this("", nestedException)
 }

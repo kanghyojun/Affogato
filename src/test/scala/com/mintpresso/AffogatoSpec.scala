@@ -32,5 +32,19 @@ class AffogatoSpec extends Specification {
         "bugs-1"
       ) === true
     }
+
+    "Throw exception when data json is invalid" in {
+      val invalidJson = """
+      {
+        "blah" : 1,
+        "daef": 2,
+      """
+      val affogato = Affogato(apiKey)
+      affogato.set(
+        _type="user",
+        identifier="admire",
+        data=invalidJson
+      ) must throwA[AffogatoInvalidJsonException]
+    }
   }
 }
