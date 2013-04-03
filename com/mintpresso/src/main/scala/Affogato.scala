@@ -20,7 +20,7 @@ import dispatch._
  */ 
 object Affogato {
   val separator = "::"
-  
+
   def apply(token: String, accountId: Long): Affogato = new Affogato(token, accountId)
 
   /** Overloaded constructor
@@ -89,4 +89,6 @@ class Affogato(val token: String, val accountId: Long) {
           objectType: String, objectId: String ): Boolean = {
     true
   }
+
+  override def toString(): String = "Affogato(%1$s, %2$s)".format(token , accountId)
 }
