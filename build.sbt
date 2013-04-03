@@ -8,7 +8,8 @@ scalaVersion := "2.9.2"
 
 libraryDependencies ++= Seq(
   "net.databinder.dispatch" %% "dispatch-core" % "0.9.5",
-  "org.specs2" %% "specs2" % "1.12.3" % "test"
+  "org.specs2" %% "specs2" % "1.12.3" % "test",
+  "net.liftweb" %% "lift-json" % "2.5-RC2"
 )
 
 resolvers ++= Seq(
