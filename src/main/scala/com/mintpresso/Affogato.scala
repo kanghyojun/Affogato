@@ -30,6 +30,16 @@ import net.liftweb.json.JsonDSL._
 case class Point(id: Long, _type: String, identifier: String,
                  data: String, _url: String)
 
+/** Represent a mintpresso edge. edge define realation between a points.
+ *
+ * @param subject a subject point.
+ * @param verb describe about relation between subject point 
+ *             and object point. (eg. person `listen` music)
+ * @param _object a object point.
+ *
+ */
+case class Edge(subject: Point, verb: String, _object: Point)
+
 /** Affogato is a Mintpresso Scala API Pack.
  */ 
 object Affogato {
