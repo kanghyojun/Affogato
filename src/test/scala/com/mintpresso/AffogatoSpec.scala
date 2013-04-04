@@ -67,13 +67,33 @@ class AffogatoSpec extends Specification {
 
     "Get a Edge" in {
       val affogato = Affogato(apiKey)
-      affogato.get(
-        "user",
-        userIdentifier,
-        "listen",
-        "music",
-        "bugs-1"
-      ) === true
+
+      affogato.set("user", userIdentifier) must beSome
+      affogato.set("music", "bugs-1") must beSome
+
+      val res = affogato.set(
+        subjectType="user",
+        subjectIdentifier=userIdentifier,
+        verb="listen",
+        objectType="music",
+        objectIdentifier="bugs-1"
+      )
+      res === true
+
+      val getRes = affogato.get(
+        subjectType="user",
+        subjectIdentifier=userIdentifier,
+        verb="listen",
+        objectType="music",
+        objectIdentifier="bugs-1"
+      )
+      getRes must beSome
+      getRes.map { edges =>
+        edges.length must be_>(0)
+      }.getOrElse {
+        true === false
+      }
+
     }
 
     "Throw exception when data json is invalid" in {

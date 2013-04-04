@@ -38,7 +38,7 @@ case class Point(id: Long, _type: String, identifier: String,
  * @param _object a object point.
  *
  */
-case class Edge(subject: Point, verb: String, _object: Point)
+case class Edge(subject: Point, verb: String, _object: Point, url: String)
 
 /** Affogato is a Mintpresso Scala API Pack.
  */ 
@@ -171,7 +171,7 @@ class Affogato(val token: String, val accountId: Long) {
         JObject(status) <- d \\ "status"
         JField("code", JInt(code)) <- status
       } yield code
-      
+
       r.head == 201 || r.head == 200
     }.getOrElse {
       false
@@ -210,18 +210,71 @@ class Affogato(val token: String, val accountId: Long) {
 
   /** Get a edge from mintpresso
    *
+   * @param subjectId id of subject point
    * @param subjectType type of subject point
    * @param subjectIdentifier identifier of subject point
    * @param verb describe about relation between subject point 
    *        and object point. (eg. person `listen` music)
+   * @param objectId id of object point
    * @param objectType type of object point
    * @param objectIdentifier identifier of object point
    * @return a value whether request is successfully ended or not
    *
    */
-  def get(subjectType: String, subjectId: String, verb: String,
-          objectType: String, objectId: String ): Boolean = {
-    true
+  def get(subjectId: Option[Long] = None, subjectType: String, 
+          subjectIdentifier: String, verb: String,
+          objectId: Option[Long] = None, objectType: String,
+          objectIdentifier: String): Option[List[Edge]] = {
+    val getEdgeURI = uri("/account/%d/edge".format(accountId))
+    val req = url(getEdgeURI)
+    req.addQueryParameter("api_token", token)
+    req.addQueryParameter("subjectIdentifier", subjectIdentifier)
+    req.addQueryParameter("subjectType", subjectType)
+    req.addQueryParameter("objectIdentifier", objectIdentifier)
+    req.addQueryParameter("objectType", objectType)
+    req.addQueryParameter("verb", verb)
+
+    subjectId.map { sId =>
+      req.addQueryParameter("subjectId", sId.toString) 
+    }
+
+    objectId.map { oId =>
+      req.addQueryParameter("objectId", oId.toString) 
+    }
+
+    Http(req OK as.String).option().map { res =>
+      def pointURI(i: Long): String = uri("/account/%d/point/%d".format(accountId, i))
+      val json = parse(res)
+      val r: List[Edge] = for {
+        JObject(edges) <- json \\ "edges"
+        JField("subjectId", JInt(subjectId)) <- edges
+        JField("subjectType", JString(subjectType)) <- edges
+        JField("verb", JString(verb)) <- edges
+        JField("objectId", JInt(objectId)) <- edges
+        JField("objectType", JString(objectType)) <- edges
+        JField("_url", JString(url)) <- edges
+      } yield Edge(
+                Point(
+                  subjectId.toLong,
+                  subjectType,
+                  subjectIdentifier,
+                  "",
+                  pointURI(subjectId.toLong)
+                ),
+                verb, 
+                Point(
+                  objectId.toLong,
+                  objectType,
+                  objectIdentifier,
+                  "",
+                  pointURI(objectId.toLong)
+                ),
+                url
+              )
+      Some(r)
+    }.getOrElse {
+      None
+    }
   }
 
   /** Generate a uri for mintpresso api
