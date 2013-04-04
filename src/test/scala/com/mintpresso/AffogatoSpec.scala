@@ -19,7 +19,27 @@ class AffogatoSpec extends Specification {
 
       val affogato = Affogato(apiKey)
 
-      affogato.set(_type="user", identifier="admire9@gmail.com") === true
+      affogato.set(
+        _type="user", 
+        identifier="admire9@gmail.com", 
+        data="""{
+          "name": "khs",
+          "age": "22"
+        }""").isEmpty === false
+    }
+
+    "Return Point when add a point" in {
+      val affogato = Affogato(apiKey)
+      affogato.set(
+        _type="user", 
+        identifier="admire9@gmail.com", 
+        data="""{
+          "name": "khs",
+          "age": "22"
+        }"""
+      ).map { point =>
+        (point._type, point.identifier)
+      } === Some(("user", "admire9@gmail.com"))
     }
 
     "Get Point" in {

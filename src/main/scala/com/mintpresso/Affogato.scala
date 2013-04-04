@@ -47,6 +47,7 @@ object Affogato {
    * scala> import com.mintpresso._
    * scala> val affogato: Affogato = Affogato("cc55223dfasfe29fs1::1") 
    * affogato: com.mintpresso.Affogato = com.mintpresso.Affogato
+   *
    * }}}
    *
    */
@@ -62,6 +63,7 @@ object Affogato {
  * scala> import com.mintpresso._
  * scala> val affogato: Affogato = Affogato("cc55223dfasfe29fs", 1) 
  * affogato: com.mintpresso.Affogato = com.mintpresso.Affogato
+ *
  * }}}
  *
  * @constructor Create a new affogato with api key
@@ -84,10 +86,39 @@ class Affogato(val token: String, val accountId: Long) {
    * @return a value whether request is successfully ended or not
    *
    */
-  def set(_type: String, identifier: String, data: String = "{}"): Boolean = {
+  def set(_type: String, identifier: String, data: String = "{}"): Option[Point] = {
     val parsedData = parse(data)
     if(parsedData == JNothing) throw new AffogatoInvalidJsonException("A point data is invalid. data: String = %s".format(data))
-    true
+
+    val point = 
+      ("point" -> 
+        ("type" -> _type) ~
+        ("identifier" -> identifier) ~
+        ("data" -> parsedData))
+
+    val additionalData: String = compact(render(point))
+    val postPointURI = uri("/account/%d/point".format(accountId))
+    var req = url(postPointURI).POST
+
+    req.addQueryParameter("api_token", token)
+    req << additionalData
+    req.addHeader("Content-Type", "application/json")
+
+    Http(req OK as.String).option().map { res =>
+      val json = parse(res)
+      var r = for { 
+        JObject(point) <- json \ "point"
+        JField("id", JInt(i)) <- point 
+        JField("type", JString(t)) <- point 
+        JField("identifier", JString(iden)) <- point 
+        JField("data", JObject(data)) <- point
+        JField("_url", JString(u)) <- point
+      } yield Point(i.toLong, t, iden, compact(render(data)), u)
+
+      Some(r.head)
+    }.getOrElse {
+      None
+    }
   }
 
   /** Get a edge from mintpresso
