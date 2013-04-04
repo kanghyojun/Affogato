@@ -86,7 +86,7 @@ class Affogato(val token: String, val accountId: Long) {
    *
    * {{{
    * scala> affogato.set("user", "admire9@gmail.com")
-   * Boolean = true
+   * Option[Point] = Some(Point(...))
    *
    * }}} 
    *
@@ -128,6 +128,53 @@ class Affogato(val token: String, val accountId: Long) {
       Some(r.head)
     }.getOrElse {
       None
+    }
+  }
+
+  /** Add a Edge to mintpresso
+   *
+   * {{{
+   * scala> affogato.set("user", "admire9@gmail.com", "listen", "music", "bugs-123")
+   * Option[Edge] = Some(Edge(...))
+   *
+   * }}} 
+   *
+   * @param subjectType type of subject point
+   * @param subjectIdentifier identifier of subject point
+   * @param verb describe about relation between subject point 
+   *        and object point. (eg. person `listen` music)
+   * @param objectType type of object point
+   * @param objectIdentifier identifier of object point
+   * @return a value whether request is successfully ended or not
+   *
+   */
+  def set(subjectType: String, subjectIdentifier: String, verb: String,
+          objectType: String, objectIdentifier: String): Boolean = {
+    val edge = 
+      ("edge" -> 
+        ("subjectId" -> subjectIdentifier) ~
+        ("subjectType" -> subjectType) ~
+        ("objectId" -> objectIdentifier) ~
+        ("objectType" -> objectType) ~
+        ("verb" -> verb))
+
+    val addEdgeURI = uri("/account/%d/edge".format(accountId))
+    val req = url(addEdgeURI).POST
+    req << compact(render(edge))
+    req.addQueryParameter("api_token", token)     
+    req.addHeader("Content-Type", "application/json")
+
+    Http(req OK as.String).option().map { res =>
+      val d: JValue = parse(res)
+
+      val r = for {
+        JObject(status) <- d \\ "status"
+        JField("code", JInt(code)) <- status
+      } yield code
+      
+      r.head == 201 || r.head == 200
+    }.getOrElse {
+      false
     }
   }
 

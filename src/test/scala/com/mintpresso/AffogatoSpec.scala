@@ -49,6 +49,22 @@ class AffogatoSpec extends Specification {
       }
     }
 
+    "Add a Edge" in {
+      val affogato = Affogato(apiKey)
+
+      affogato.set("user", userIdentifier) must beSome
+      affogato.set("music", "bugs-1") must beSome
+
+      val res = affogato.set(
+        subjectType="user",
+        subjectIdentifier=userIdentifier,
+        verb="listen",
+        objectType="music",
+        objectIdentifier="bugs-1"
+      )
+      res === true
+    }
+
     "Get a Edge" in {
       val affogato = Affogato(apiKey)
       affogato.get(
