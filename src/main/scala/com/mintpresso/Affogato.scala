@@ -33,7 +33,7 @@ case class Point(id: Long, _type: String, identifier: String,
 /** Represent a mintpresso edge. edge define realation between a points.
  *
  * @param subject a subject point.
- * @param verb describe about relation between subject point 
+ * @param verb describe about relation between subject point
  *             and object point. (eg. person `listen` music)
  * @param _object a object point.
  *
@@ -93,7 +93,7 @@ class Affogato(val token: String, val accountId: Long) {
    * @param _type type of point
    * @param identifier identifier of point
    * @param data additional data of point
-   * @return a value whether request is successfully ended or not
+   * @return a Option[Point] if request goes success, it will return Some(Point)
    *
    */
   def set(_type: String, identifier: String, data: String = "{}"): Option[Point] = {
@@ -126,6 +126,36 @@ class Affogato(val token: String, val accountId: Long) {
       } yield Point(i.toLong, t, iden, compact(render(data)), u)
 
       Some(r.head)
+    }.getOrElse {
+      None
+    }
+  }
+
+  /** Get a point
+   *
+   * @param _type type of point
+   * @param identifier identifier of point
+   * @return a Option[point] if point is exist, Some(Point) will return.
+   *
+   */
+  def get(_type: String, identifier: String): Option[Point] = {
+    val getPointURI = uri("/account/%d/point".format(accountId))
+    var req = url(getPointURI)
+    req.addQueryParameter("api_token", token)
+    req.addQueryParameter("type", _type)
+    req.addQueryParameter("identifier", identifier)
+
+    Http(req OK as.String).option().map { res =>
+      val json = parse(res)
+      val point = for {
+        JObject(point) <- json \ "point"
+        JField("id", JInt(i)) <- point 
+        JField("type", JString(t)) <- point 
+        JField("identifier", JString(iden)) <- point 
+        JField("data", JObject(data)) <- point
+        JField("_url", JString(u)) <- point
+      } yield Point(i.toLong, t, iden, compact(render(data)), u)
+      Some(point.head)
     }.getOrElse {
       None
     }

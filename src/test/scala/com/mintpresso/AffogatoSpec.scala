@@ -6,6 +6,7 @@ import com.mintpresso._
 class AffogatoSpec extends Specification {
   
   val apiKey = "cc64f8ee51c8420172a907baa81285ae::13"
+  val userIdentifier = "admire9@gmail.com"
   
   "Mintpresso API Pack" should {
     
@@ -15,38 +16,44 @@ class AffogatoSpec extends Specification {
       affogato.accountId === 13
     }
 
-    "Add point" in {
+    "Add a point" in {
 
       val affogato = Affogato(apiKey)
 
       affogato.set(
         _type="user", 
-        identifier="admire9@gmail.com", 
+        identifier=userIdentifier, 
         data="""{
           "name": "khs",
           "age": "22"
         }""").isEmpty === false
     }
 
-    "Return Point when add a point" in {
+    "Return a Point when add a point" in {
       val affogato = Affogato(apiKey)
       affogato.set(
         _type="user", 
-        identifier="admire9@gmail.com", 
-        data="""{
-          "name": "khs",
-          "age": "22"
-        }"""
+        identifier=userIdentifier
       ).map { point =>
         (point._type, point.identifier)
-      } === Some(("user", "admire9@gmail.com"))
+      } === Some(("user", userIdentifier))
     }
 
-    "Get Point" in {
+    "Get a Point" in {
+      val affogato = Affogato(apiKey)
+      val res = affogato.get("user", userIdentifier)
+      res.map { p =>
+        p.identifier === userIdentifier
+      }.getOrElse {
+        res.isEmpty === false
+      }
+    }
+
+    "Get a Edge" in {
       val affogato = Affogato(apiKey)
       affogato.get(
         "user",
-        "admire9@gmail.com",
+        userIdentifier,
         "listen",
         "music",
         "bugs-1"
