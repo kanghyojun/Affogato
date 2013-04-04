@@ -16,6 +16,19 @@ package com.mintpresso
 
 import dispatch._
 import net.liftweb.json._
+import net.liftweb.json.JsonDSL._
+
+/** Represent a mintpresso point.
+ *
+ * @param id mintpresso point id.
+ * @param _type mintpresso point's type 
+ * @param identifier mintpresso  point's identifier. identifier should be unique
+ * @param data mintpresso mintpresso point's additional data. json string
+ * @param _url mintpresso mintpresso point's url
+ *
+ */
+case class Point(id: Long, _type: String, identifier: String,
+                 data: String, _url: String)
 
 /** Affogato is a Mintpresso Scala API Pack.
  */ 
