@@ -228,9 +228,13 @@ class Affogato(val token: String, val accountId: Long) {
     val getEdgeURI = uri("/account/%d/edge".format(accountId))
     val req = url(getEdgeURI)
     req.addQueryParameter("api_token", token)
-    req.addQueryParameter("subjectIdentifier", subjectIdentifier)
+    if(subjectIdentifier != "?") req.addQueryParameter("subjectIdentifier",
+                                                       subjectIdentifier)
+
+    if(objectIdentifier != "?") req.addQueryParameter("objectIdentifier",
+                                                      objectIdentifier)
+    
     req.addQueryParameter("subjectType", subjectType)
-    req.addQueryParameter("objectIdentifier", objectIdentifier)
     req.addQueryParameter("objectType", objectType)
     req.addQueryParameter("verb", verb)
 

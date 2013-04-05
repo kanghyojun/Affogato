@@ -93,6 +93,20 @@ class AffogatoSpec extends Specification {
       }.getOrElse {
         true === false
       }
+      val getQueryRes = affogato.get(
+        subjectType="user",
+        subjectIdentifier=userIdentifier,
+        verb="listen",
+        objectType="music",
+        objectIdentifier="?"
+      )
+
+      getQueryRes must beSome
+      getQueryRes.map { edges =>
+        edges.length must be_>(0)
+      }.getOrElse {
+        true === false
+      }
 
     }
 
