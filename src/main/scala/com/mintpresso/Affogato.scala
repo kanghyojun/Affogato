@@ -177,6 +177,33 @@ class Affogato(val token: String, val accountId: Long) {
       false
     }
   }
+  
+  /** Get a point by id
+   *
+   * @param id id of point
+   * @return a Option[point] if point is exist, Some(Point) will return.
+   *
+   */
+  def get(id: Long): Option[Point] = {
+    val getPointURI = uri("/account/%d/point/%d".format(accountId, id))
+    var req = url(getPointURI)
+    req.addQueryParameter("api_token", token)
+
+    Http(req OK as.String).option().map { res =>
+      val json = parse(res)
+      val point = for {
+        JObject(point) <- json \ "point"
+        JField("id", JInt(i)) <- point 
+        JField("type", JString(t)) <- point 
+        JField("identifier", JString(iden)) <- point 
+        JField("data", JObject(data)) <- point
+        JField("_url", JString(u)) <- point
+      } yield Point(i.toLong, t, iden, compact(render(data)), u)
+      Some(point.head)
+    }.getOrElse {
+      None
+    }
+  }
 
   /** Get a point
    *
@@ -233,7 +260,7 @@ class Affogato(val token: String, val accountId: Long) {
 
     if(objectIdentifier != "?") req.addQueryParameter("objectIdentifier",
                                                       objectIdentifier)
-    
+
     req.addQueryParameter("subjectType", subjectType)
     req.addQueryParameter("objectType", objectType)
     req.addQueryParameter("verb", verb)
