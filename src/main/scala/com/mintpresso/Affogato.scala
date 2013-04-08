@@ -14,6 +14,7 @@ package com.mintpresso
   * }}} 
   */
 
+import com.typesafe.config._
 import dispatch._
 import net.liftweb.json._
 import net.liftweb.json.JsonDSL._
@@ -82,6 +83,17 @@ object Affogato {
  * @return A instance of Affogato
  */
 class Affogato(val token: String, val accountId: Long) {
+  val conf = ConfigFactory.load("affogato")
+  val affogatoConf: Map[String, String] = Map[String, String](
+    "mintpresso.host" -> conf.getString("mintpresso.host"),
+    "mintpresso.port" -> conf.getString("mintpresso.port"),
+    "mintpresso.version" -> conf.getString("mintpresso.version"),
+    "mintpresso.protocol" -> conf.getString("mintpresso.protocol"),
+    "mintpresso.url.point" -> "/account/%d/point",
+    "mintpresso.url.edge" -> "/account/%d/edge",
+    "mintpresso.url.point.find.id" -> "/account/%d/point/%d"
+  )
+
   /** Add a point to mintpresso
    *
    * {{{
@@ -107,7 +119,7 @@ class Affogato(val token: String, val accountId: Long) {
         ("data" -> parsedData))
 
     val additionalData: String = compact(render(point))
-    val postPointURI = uri("/account/%d/point".format(accountId))
+    val postPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
     var req = url(postPointURI).POST
 
     req.addQueryParameter("api_token", token)
@@ -158,7 +170,7 @@ class Affogato(val token: String, val accountId: Long) {
         ("objectType" -> objectType) ~
         ("verb" -> verb))
 
-    val addEdgeURI = uri("/account/%d/edge".format(accountId))
+    val addEdgeURI = uri(affogatoConf("mintpresso.url.edge").format(accountId))
     val req = url(addEdgeURI).POST
     req << compact(render(edge))
     req.addQueryParameter("api_token", token)     
@@ -185,7 +197,7 @@ class Affogato(val token: String, val accountId: Long) {
    *
    */
   def get(id: Long): Option[Point] = {
-    val getPointURI = uri("/account/%d/point/%d".format(accountId, id))
+    val getPointURI = uri(affogatoConf("mintpresso.url.point.find.id").format(accountId, id))
     var req = url(getPointURI)
     req.addQueryParameter("api_token", token)
 
@@ -213,7 +225,7 @@ class Affogato(val token: String, val accountId: Long) {
    *
    */
   def get(_type: String, identifier: String): Option[Point] = {
-    val getPointURI = uri("/account/%d/point".format(accountId))
+    val getPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
     var req = url(getPointURI)
     req.addQueryParameter("api_token", token)
     req.addQueryParameter("type", _type)
@@ -252,7 +264,7 @@ class Affogato(val token: String, val accountId: Long) {
           subjectIdentifier: String, verb: String,
           objectId: Option[Long] = None, objectType: String,
           objectIdentifier: String): Option[List[Edge]] = {
-    val getEdgeURI = uri("/account/%d/edge".format(accountId))
+    val getEdgeURI = uri(affogatoConf("mintpresso.url.edge").format(accountId))
     val req = url(getEdgeURI)
     req.addQueryParameter("api_token", token)
     if(subjectIdentifier != "?") req.addQueryParameter("subjectIdentifier",
@@ -274,7 +286,7 @@ class Affogato(val token: String, val accountId: Long) {
     }
 
     Http(req OK as.String).option().map { res =>
-      def pointURI(i: Long): String = uri("/account/%d/point/%d".format(accountId, i))
+      def pointURI(i: Long): String = uri(affogatoConf("mintpresso.url.point.find.id").format(accountId, i))
       val json = parse(res)
       val r: List[Edge] = for {
         JObject(edges) <- json \\ "edges"
@@ -318,15 +330,16 @@ class Affogato(val token: String, val accountId: Long) {
    * String = http://mintpresso.com:90001/v1/post/account/1/point
    * }}} 
    *
-   */
+   */ 
   def uri(path: String) = {
-    val protocol = "http"
-    val url = "mintpresso.com"
-    val port: Long = 9001 
-    val versionPrefix = "v1"
 
-    "%1$s://%2$s:%3$d/%4$s%5$s".format(protocol, url, port,
-                                       versionPrefix, path)
+    "%1$s://%2$s:%3$s/%4$s%5$s".format(
+      affogatoConf("mintpresso.protocol"),
+      affogatoConf("mintpresso.host"),
+      affogatoConf("mintpresso.port"),
+      affogatoConf("mintpresso.version"),
+      path
+    )
   }
 
   override def toString(): String = "Affogato(%1$s, %2$s)".format(token , accountId)

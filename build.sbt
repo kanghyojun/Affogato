@@ -11,7 +11,8 @@ publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.
 libraryDependencies ++= Seq(
   "net.databinder.dispatch" % "dispatch-core_2.10" % "0.9.5",
   "org.specs2" % "specs2_2.10" % "1.14",
-  "net.liftweb" % "lift-json_2.10" % "2.5-RC2"
+  "net.liftweb" % "lift-json_2.10" % "2.5-RC2",
+  "com.typesafe" % "config" % "1.0.0"
 )
 
 resolvers ++= Seq(
