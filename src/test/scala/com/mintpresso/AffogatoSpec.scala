@@ -29,6 +29,17 @@ class AffogatoSpec extends Specification {
         }""").isEmpty === false
     }
 
+    "Add a point as Map" in {
+      val affogato = Affogato(apiKey)
+
+      affogato.set(Map[String, String](
+        "user" -> userIdentifier,
+        "name" -> "khs",
+        "age" -> "22"
+      )) must beSome
+
+    }
+
     "Return a Point when add a point" in {
       val affogato = Affogato(apiKey)
       affogato.set(

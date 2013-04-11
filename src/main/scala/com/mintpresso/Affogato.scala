@@ -142,6 +142,40 @@ class Affogato(val token: String, val accountId: Long) {
       None
     }
   }
+  /** Add a point to mintpresso
+   *
+   * {{{
+   * scala> affogato.set(Map[String, String]("user" -> "admire9@gmail.com", "name" -> "kanghyojun"))
+   * Option[Point] = Some(Point(...))
+   *
+   * }}} 
+   *
+   * @param d information of point
+   * @return a Option[Point] if request goes success, it will return Some(Point)
+   *
+   */
+  def set(d: Map[String, String]): Option[Point] = {
+    var _type = ""
+    var identifier = ""
+    var data: JObject = null
+    for( (pair, index) <- d.zipWithIndex ) {
+      index match {
+        case 0 => {
+          _type = pair._1
+          identifier = pair._2
+        }
+        case _ => {
+          if(data == null) {
+            data = pair
+          } else {
+            data = data ~ pair
+          }
+        }
+      }
+    }
+
+    this.set(_type, identifier, compact(render(data)))
+  }
 
   /** Add a Edge to mintpresso
    *
