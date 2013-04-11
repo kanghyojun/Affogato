@@ -36,7 +36,7 @@ class AffogatoSpec extends Specification {
         "user" -> userIdentifier,
         "name" -> "khs",
         "age" -> "22"
-      )) must beSome
+      )).as[Option[Point]] must beSome
 
     }
 
@@ -47,8 +47,7 @@ class AffogatoSpec extends Specification {
         'user  -> userIdentifier,
         'name -> "khs",
         'age -> "22"
-      )) must beSome
-
+      )).as[Option[Point]] must beSome
     }
 
     "Add a point with Point" in {

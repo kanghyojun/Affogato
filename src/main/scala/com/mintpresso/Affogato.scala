@@ -42,6 +42,10 @@ case class Point(id: Long, _type: String, identifier: String,
  */
 case class Edge(subject: Point, verb: String, _object: Point, url: String)
 
+case class ResultSet(result: AnyRef) {
+  def as[T]: T = result.asInstanceOf[T]
+}
+
 /** Affogato is a Mintpresso Scala API Pack.
  */ 
 object Affogato {
@@ -171,7 +175,7 @@ class Affogato(val token: String, val accountId: Long) {
    * @return a Option[Point]
    *
    */
-  def set[T](d: Map[T, String]): Option[Point] = { 
+  def set[T](d: Map[T, String]): ResultSet = { 
     var typeIdentifier: (String, String) = null
     var data: JObject = null
     for( (pair, index) <- d.zipWithIndex ) {
@@ -188,7 +192,7 @@ class Affogato(val token: String, val accountId: Long) {
       }
     }
 
-    set(typeIdentifier._1, typeIdentifier._2, compact(render(data)))
+    ResultSet(set(typeIdentifier._1, typeIdentifier._2, compact(render(data))))
   }
  
   /** Add a point to mintpresso
