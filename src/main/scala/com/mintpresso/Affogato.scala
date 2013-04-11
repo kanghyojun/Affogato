@@ -190,6 +190,23 @@ class Affogato(val token: String, val accountId: Long) {
 
     set(typeIdentifier._1, typeIdentifier._2, compact(render(data)))
   }
+ 
+  /** Add a point to mintpresso
+   *
+   * {{{
+   * scala> affogato.set(Point( ... ))
+   * Option[Point] = Some(Point(...))
+   *
+   * }}} 
+   *
+   * @param point [[com.mintpresso.Point]] instance 
+   * @return a Option[Point]
+   *
+   */
+  def set(point: Point): Option[Point] = { 
+    set(point._type, point.identifier, point.data)
+  }
+
 
   /** Add a Edge to mintpresso
    *

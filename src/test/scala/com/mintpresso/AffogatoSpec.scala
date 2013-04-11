@@ -29,7 +29,7 @@ class AffogatoSpec extends Specification {
         }""").isEmpty === false
     }
 
-    "Add a point as Map[String, String]" in {
+    "Add a point with Map[String, String]" in {
       val affogato = Affogato(apiKey)
 
       affogato.set(Map[String, String](
@@ -40,7 +40,7 @@ class AffogatoSpec extends Specification {
 
     }
 
-    "Add a point as Map[Symbol, String]" in {
+    "Add a point with Map[Symbol, String]" in {
       val affogato = Affogato(apiKey)
 
       affogato.set(Map[Symbol, String](
@@ -50,6 +50,22 @@ class AffogatoSpec extends Specification {
       )) must beSome
 
     }
+
+    "Add a point with Point" in {
+      val affogato = Affogato(apiKey)
+
+      affogato.set(Point(
+        -1,
+        "user",
+        "admire9@gmail.com",
+        """{
+          "name": "khs",
+          "age": "22"
+        }""",
+        ""
+      )) must beSome
+    }
+
 
     "Return a Point when add a point" in {
       val affogato = Affogato(apiKey)
