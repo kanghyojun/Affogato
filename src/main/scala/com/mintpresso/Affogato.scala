@@ -45,7 +45,7 @@ case class Edge(subject: Point, verb: String, _object: Point, url: String)
 /** Affogato is a Mintpresso Scala API Pack.
  */ 
 object Affogato {
-  val separator = "::"
+  val separator = "::" 
 
   def apply(token: String, accountId: Long): Affogato = new Affogato(token, accountId)
 
@@ -95,6 +95,18 @@ class Affogato(val token: String, val accountId: Long) {
     "mintpresso.url.point.find.id" -> "/account/%d/point/%d"
   )
 
+  /** Convert (T, String) to (String, String) for syntax sugar
+   *
+   * @param x generic tuple to be replaced (String, String)
+   * @return a pair of string 
+   *
+   */
+  implicit def tToString[T](x: (T, String)): (String, String) = x._1 match {
+    case k: String  => (k, x._2)
+    case k: Symbol => (k.name, x._2)
+    case k => throw new Exception(k.getClass.toString + " is invalid type for Affogato.set")
+  }
+ 
   /** Add a point to mintpresso
    *
    * {{{
@@ -143,26 +155,23 @@ class Affogato(val token: String, val accountId: Long) {
       None
     }
   }
-
+  
   /** Add a point to mintpresso
    *
    * {{{
    * scala> affogato.set(Map[String, String]("user" -> "admire9@gmail.com", "name" -> "kanghyojun"))
    * Option[Point] = Some(Point(...))
    *
+   * scala> affogato.set(Map[String, String]('user -> "admire93@gmail.com", 'name -> "kanghyojun"))
+   * Option[Point] = Some(Point(...))
+   *
    * }}} 
    *
-   * @param d information of point
-   * @return a Option[Point] if request goes success, it will return Some(Point)
+   * @param d information of point 
+   * @return a Option[Point]
    *
    */
-  def set[T](d: Map[T, String]): Option[Point] = {
-    implicit def tToString(x: (T, String)): (String, String) = x._1 match {
-      case k: String  => (k, x._2)
-      case k: Symbol => (k.name, x._2)
-      case k => throw new Exception(k.getClass.toString + " is invalid type for Affogato.set")
-    }
-
+  def set[T](d: Map[T, String]): Option[Point] = { 
     var typeIdentifier: (String, String) = null
     var data: JObject = null
     for( (pair, index) <- d.zipWithIndex ) {
@@ -179,7 +188,7 @@ class Affogato(val token: String, val accountId: Long) {
       }
     }
 
-    this.set(typeIdentifier._1, typeIdentifier._2, compact(render(data)))
+    set(typeIdentifier._1, typeIdentifier._2, compact(render(data)))
   }
 
   /** Add a Edge to mintpresso
