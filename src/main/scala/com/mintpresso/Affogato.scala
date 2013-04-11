@@ -14,6 +14,7 @@ package com.mintpresso
   * }}} 
   */
 
+import scala.language.implicitConversions
 import com.typesafe.config._
 import dispatch._
 import net.liftweb.json._
@@ -142,6 +143,7 @@ class Affogato(val token: String, val accountId: Long) {
       None
     }
   }
+
   /** Add a point to mintpresso
    *
    * {{{
@@ -154,27 +156,30 @@ class Affogato(val token: String, val accountId: Long) {
    * @return a Option[Point] if request goes success, it will return Some(Point)
    *
    */
-  def set(d: Map[String, String]): Option[Point] = {
-    var _type = ""
-    var identifier = ""
+  def set[T](d: Map[T, String]): Option[Point] = {
+    implicit def tToString(x: (T, String)): (String, String) = x._1 match {
+      case k: String  => (k, x._2)
+      case k: Symbol => (k.name, x._2)
+      case k => throw new Exception(k.getClass.toString + " is invalid type for Affogato.set")
+    }
+
+    var typeIdentifier: (String, String) = null
     var data: JObject = null
     for( (pair, index) <- d.zipWithIndex ) {
       index match {
-        case 0 => {
-          _type = pair._1
-          identifier = pair._2
-        }
+        case 0 =>  typeIdentifier = pair
         case _ => {
+          var p: (String, String) = pair
           if(data == null) {
-            data = pair
+            data = p
           } else {
-            data = data ~ pair
+            data = data ~ p
           }
         }
       }
     }
 
-    this.set(_type, identifier, compact(render(data)))
+    this.set(typeIdentifier._1, typeIdentifier._2, compact(render(data)))
   }
 
   /** Add a Edge to mintpresso
