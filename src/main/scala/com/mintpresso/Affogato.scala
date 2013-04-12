@@ -42,7 +42,7 @@ case class Point(id: Long, _type: String, identifier: String,
  */
 case class Edge(subject: Point, verb: String, _object: Point, url: String)
 
-case class ResultSet(result: AnyRef) {
+case class ResultSet(result: Any) {
   def as[T]: T = result.asInstanceOf[T]
 }
 
@@ -98,19 +98,22 @@ class Affogato(val token: String, val accountId: Long) {
     "mintpresso.url.edge" -> "/account/%d/edge",
     "mintpresso.url.point.find.id" -> "/account/%d/point/%d"
   )
+  val verbSet: Set[String] = Set("verb", "do", "did", "does")
 
-  /** Convert (T, String) to (String, String) for syntax sugar
+  /** Convert Map[T, String] to Map[String, String] for syntax sugar
    *
-   * @param x generic tuple to be replaced (String, String)
-   * @return a pair of string 
+   * @param x Map[T, String] to be replaced Map[String, String]. T should be String or Symbol
+   * @return a Map[String, String]
    *
    */
-  implicit def tToString[T](x: (T, String)): (String, String) = x._1 match {
-    case k: String  => (k, x._2)
-    case k: Symbol => (k.name, x._2)
-    case k => throw new Exception(k.getClass.toString + " is invalid type for Affogato.set")
+  implicit def tToMap[T](m: Map[T, String]): Map[String, String] = m.map { a =>
+    a._1 match {
+      case x: String => (x -> a._2)
+      case x: Symbol => (x.name -> a._2)
+      case x => throw new Exception(x.getClass.toString() + " is invalid type for Affogato.set(Map[T,String])")
+    }
   }
- 
+  
   /** Add a point to mintpresso
    *
    * {{{
@@ -138,10 +141,9 @@ class Affogato(val token: String, val accountId: Long) {
     val additionalData: String = compact(render(point))
     val postPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
     var req = url(postPointURI).POST
-
-    req.addQueryParameter("api_token", token)
-    req << additionalData
-    req.addHeader("Content-Type", "application/json")
+    req = req.addQueryParameter("api_token", token)
+    req = req.addHeader("Content-Type", "application/json")
+    req = req << additionalData
 
     Http(req OK as.String).option().map { res =>
       val json = parse(res)
@@ -176,25 +178,43 @@ class Affogato(val token: String, val accountId: Long) {
    *
    */
   def set[T](d: Map[T, String]): ResultSet = { 
-    var typeIdentifier: (String, String) = null
-    var data: JObject = null
-    for( (pair, index) <- d.zipWithIndex ) {
-      index match {
-        case 0 =>  typeIdentifier = pair
-        case _ => {
-          var p: (String, String) = pair
-          if(data == null) {
-            data = p
-          } else {
-            data = data ~ p
+    val stringMap: Map[String, String] = d
+
+    if((stringMap.keySet & verbSet) isEmpty) {
+      var typeIdentifier: (String, String) = null
+      var data: JObject = null
+      for( (pair, index) <- stringMap.zipWithIndex ) {
+        index match {
+          case 0 =>  typeIdentifier = pair
+          case _ => {
+            if(data == null) {
+              data = pair
+            } else {
+              data = data ~ pair
+            }
           }
         }
       }
-    }
 
-    ResultSet(set(typeIdentifier._1, typeIdentifier._2, compact(render(data))))
+      ResultSet(set(typeIdentifier._1, typeIdentifier._2, compact(render(data))))
+    } else {
+      var sP: (String, String) = null
+      var verb: String = null
+      var oP: (String, String) = null
+
+      for( (pair, index) <- stringMap.zipWithIndex ) {
+        index match {
+          case 0 => sP = pair
+          case 1 => verb = pair._2
+          case 2 => oP = pair
+          case _ => throw new Exception("Unused data contained in data -"+pair)
+        }
+      }
+
+      ResultSet(set(sP._1, sP._2, verb, oP._1, oP._2))
+    }
   }
- 
+
   /** Add a point to mintpresso
    *
    * {{{

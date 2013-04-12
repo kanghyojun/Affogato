@@ -114,6 +114,36 @@ class AffogatoSpec extends Specification {
       res === true
     }
 
+    "Add a Edge with Map[String, String]" in {
+      val affogato = Affogato(apiKey)
+
+      affogato.set("user", userIdentifier) must beSome
+      affogato.set("music", "bugs-1") must beSome
+
+      val res = affogato.set(Map[String, String](
+        "user" -> userIdentifier,
+        "do" -> "listen",
+        "music" -> "bugs-1"
+      )).as[Boolean]
+
+      res === true
+    }
+
+    "Add a Edge with Map[Symbol, String]" in {
+      val affogato = Affogato(apiKey)
+
+      affogato.set("user", userIdentifier) must beSome
+      affogato.set("music", "bugs-1") must beSome
+
+      val res = affogato.set(Map[Symbol, String](
+        'user -> userIdentifier,
+        'do -> "listen",
+        'music -> "bugs-1"
+      )).as[Boolean]
+
+      res === true
+    }
+
     "Get a Edge" in {
       val affogato = Affogato(apiKey)
 
