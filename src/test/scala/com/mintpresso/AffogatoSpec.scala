@@ -5,15 +5,17 @@ import com.mintpresso._
 
 class AffogatoSpec extends Specification {
   
-  val apiKey = "cc64f8ee51c8420172a907baa81285ae::13"
-  val userIdentifier = "admire9@gmail.com"
+  val token = "240ff06dee7-f79f-423f-9684-0cedd2c13ef3"
+  val accountId = 240
+  val apiKey = "%s::%d".format(token, accountId)
+  val userIdentifier = "admire93"
   
   "Mintpresso API Pack" should {
     
     "Can init accountId" in {
       val affogato = Affogato(apiKey)
 
-      affogato.accountId === 13
+      affogato.accountId === accountId
     }
 
     "Add a point" in {
@@ -26,7 +28,7 @@ class AffogatoSpec extends Specification {
         data="""{
           "name": "khs",
           "age": "22"
-        }""").isEmpty === false
+        }""") must beSome
     }
 
     "Add a point with Map[String, String]" in {
@@ -56,7 +58,7 @@ class AffogatoSpec extends Specification {
       affogato.set(Point(
         -1,
         "user",
-        "admire9@gmail.com",
+        userIdentifier,
         """{
           "name": "khs",
           "age": "22"
