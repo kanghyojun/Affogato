@@ -142,8 +142,9 @@ class Affogato(val token: String, val accountId: Long) {
     val postPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
     var req = url(postPointURI).POST
     req = req.addQueryParameter("api_token", token)
-    req = req.addHeader("Content-Type", "application/json")
+    req = req.addHeader("Content-Type", "application/json;charset=utf-8")
     req = req << additionalData
+    req.setBodyEncoding("utf-8")
 
     Http(req OK as.String).option().map { res =>
       val json = parse(res)
@@ -263,7 +264,7 @@ class Affogato(val token: String, val accountId: Long) {
     val req = url(addEdgeURI).POST
     req << compact(render(edge))
     req.addQueryParameter("api_token", token)     
-    req.addHeader("Content-Type", "application/json")
+    req.addHeader("Content-Type", "application/json;charset=utf-8")
 
     Http(req OK as.String).option().map { res =>
       val d: JValue = parse(res)
