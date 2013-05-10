@@ -1,3 +1,5 @@
+organization := "com.mintpresso"
+
 name := "mintpresso"
 
 description :=  "mintpresso Scala API Pack"
