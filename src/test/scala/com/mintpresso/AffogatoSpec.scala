@@ -80,22 +80,24 @@ class AffogatoSpec extends Specification {
 
     "Get a Point" in {
       val affogato = Affogato(apiKey)
-      val res = affogato.get("user", userIdentifier)
-      res.map { p =>
+      affogato.get("user", userIdentifier).as[Option[Point]] must beSome[Point].which { p =>
         p.identifier === userIdentifier
-      }.getOrElse {
-        res.isEmpty === false
       }
     }
 
     "Get a point by id" in {
       val affogato = Affogato(apiKey)
-      val res = affogato.get("user", userIdentifier)
+      val res = affogato.get("user", userIdentifier).as[Option[Point]]
       res.map { p =>
         affogato.get(p.id) must beSome
       }.getOrElse {
         true === false 
       }
+    }
+
+    "Get a point by type" in {
+      val affogato = Affogato(apiKey)
+      true === true
     }
 
     "Add a Edge" in {

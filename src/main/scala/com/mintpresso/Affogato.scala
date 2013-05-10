@@ -315,7 +315,7 @@ class Affogato(val token: String, val accountId: Long) {
    * @return a Option[point] if point is exist, Some(Point) will return.
    *
    */
-  def get(_type: String, identifier: String): Option[Point] = {
+  def get(_type: String, identifier: String): ResultSet = {
     val getPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
     var req = url(getPointURI)
     req.addQueryParameter("api_token", token)
@@ -331,10 +331,13 @@ class Affogato(val token: String, val accountId: Long) {
         JField("identifier", JString(iden)) <- point 
         JField("data", JObject(data)) <- point
         JField("_url", JString(u)) <- point
-      } yield Point(i.toLong, t, iden, compact(render(data)), u)
-      Some(point.head)
+        JField("createdAt", JInt(ca)) <- point 
+        JField("updatedAt", JInt(ua)) <- point 
+        JField("referencedAt", JInt(ra)) <- point 
+      } yield Point(i.toLong, t, iden, compact(render(data)), u, ca, ua, ra)
+      ResultSet(Some(point.head))
     }.getOrElse {
-      None
+      ResultSet(None)
     }
   }
 
