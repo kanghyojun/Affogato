@@ -63,7 +63,10 @@ class AffogatoSpec extends Specification {
           "name": "khs",
           "age": "22"
         }""",
-        ""
+        "",
+        0,
+        0,
+        0
       )) must beSome
     }
 

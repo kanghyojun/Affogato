@@ -40,7 +40,7 @@ case class Point(id: Long, _type: String, identifier: String,
  * @param _object a object point.
  *
  */
-case class Edge(subject: Point, verb: String, _object: Point, url: String)
+case class Edge(subject: Point, verb: String, _object: Point, url: String, createdAt: BigInt)
 
 case class ResultSet(result: Any) {
   def as[T]: T = result.asInstanceOf[T]
@@ -393,6 +393,7 @@ class Affogato(val token: String, val accountId: Long) {
         JField("objectId", JInt(objectId)) <- edges
         JField("objectType", JString(objectType)) <- edges
         JField("_url", JString(url)) <- edges
+        JField("createdAt", JInt(createdAt)) <- edges
       } yield Edge(
                 Point(
                   subjectId.toLong,
@@ -415,7 +416,8 @@ class Affogato(val token: String, val accountId: Long) {
                   0,
                   0
                 ),
-                url
+                url,
+                createdAt
               )
       Some(r)
     }.getOrElse {
