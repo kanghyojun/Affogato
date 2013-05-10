@@ -27,6 +27,9 @@ import net.liftweb.json.JsonDSL._
  * @param identifier mintpresso  point's identifier. identifier should be unique
  * @param data mintpresso mintpresso point's additional data. json string
  * @param _url mintpresso mintpresso point's url
+ * @param updatedAt updated time, unix timestamp
+ * @param referencedAt referenced edges, unix timestamp
+ * @param createdAt created time, unixtimestamp
  *
  */
 case class Point(id: Long, _type: String, identifier: String,
@@ -38,6 +41,8 @@ case class Point(id: Long, _type: String, identifier: String,
  * @param verb describe about relation between subject point
  *             and object point. (eg. person `listen` music)
  * @param _object a object point.
+ * @param url a edge url
+ * @param url created time, unix timestamp
  *
  */
 case class Edge(subject: Point, verb: String, _object: Point, url: String, createdAt: BigInt)
@@ -284,7 +289,7 @@ class Affogato(val token: String, val accountId: Long) {
   /** Get a point by id
    *
    * @param id id of point
-   * @return a Option[point] if point is exist, Some(Point) will return.
+   * @return a ResultSet if point is exist, ResultSet(Option[Point]) will return.
    *
    */
   def get(id: Long): Option[Point] = {
