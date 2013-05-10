@@ -264,7 +264,8 @@ class Affogato(val token: String, val accountId: Long) {
     val req = url(addEdgeURI).POST
     req << compact(render(edge))
     req.addQueryParameter("api_token", token)     
-    req.addHeader("Content-Type", "application/json;charset=utf-8")
+    req.addHeader("Content-Type", "application/json;charset=utf-8")    
+    req.setBodyEncoding("utf-8")
 
     Http(req OK as.String).option().map { res =>
       val d: JValue = parse(res)
