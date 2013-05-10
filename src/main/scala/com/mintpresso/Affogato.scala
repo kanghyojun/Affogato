@@ -30,8 +30,8 @@ import net.liftweb.json.JsonDSL._
  *
  */
 case class Point(id: Long, _type: String, identifier: String,
-                 data: String, _url: String)
-
+                 data: String, _url: String, createdAt: BigInt,
+                 updatedAt: BigInt, referencedAt: BigInt) 
 /** Represent a mintpresso edge. edge define realation between a points.
  *
  * @param subject a subject point.
@@ -155,7 +155,7 @@ class Affogato(val token: String, val accountId: Long) {
         JField("identifier", JString(iden)) <- point 
         JField("data", JObject(data)) <- point
         JField("_url", JString(u)) <- point
-      } yield Point(i.toLong, t, iden, compact(render(data)), u)
+      } yield Point(i.toLong, t, iden, compact(render(data)), u, 0, 0, 0)
 
       Some(r.head)
     }.getOrElse {
@@ -301,7 +301,10 @@ class Affogato(val token: String, val accountId: Long) {
         JField("identifier", JString(iden)) <- point 
         JField("data", JObject(data)) <- point
         JField("_url", JString(u)) <- point
-      } yield Point(i.toLong, t, iden, compact(render(data)), u)
+        JField("createdAt", JInt(ca)) <- point 
+        JField("updatedAt", JInt(ua)) <- point 
+        JField("referencedAt", JInt(ra)) <- point 
+      } yield Point(i.toLong, t, iden, compact(render(data)), u, ca, ua, ra)
       Some(point.head)
     }.getOrElse {
       None
@@ -396,7 +399,10 @@ class Affogato(val token: String, val accountId: Long) {
                   subjectType,
                   subjectIdentifier,
                   "",
-                  pointURI(subjectId.toLong)
+                  pointURI(subjectId.toLong),
+                  0,
+                  0,
+                  0
                 ),
                 verb, 
                 Point(
@@ -404,7 +410,10 @@ class Affogato(val token: String, val accountId: Long) {
                   objectType,
                   objectIdentifier,
                   "",
-                  pointURI(objectId.toLong)
+                  pointURI(objectId.toLong),
+                  0,
+                  0,
+                  0
                 ),
                 url
               )
