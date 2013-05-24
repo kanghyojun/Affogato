@@ -1,7 +1,8 @@
-# MINTPRESSO API for Scala
+# Affogato
+## MINTPRESSO API for Scala
 It supports basic graph manipulation and data querying for MINTPRESSO Data Cloud.
 
-# Getting Started
+## Getting Started
 Add this repository as a project dependency to your sbt project.
 ```scala
 import sbt._
@@ -35,7 +36,7 @@ If you're using Play Framework 2, edit `project/Build.scala`.
   )
 ```
 
-# Advanced Use
+## Advanced Use
 Clone this repository first.
 ```bash
 $ git clone https://github.com/admire93/Affogato.git affogato
@@ -70,11 +71,11 @@ Also on sbt `Project` dependencies.
 "com.mintpresso" %% "mintpresso" % "0.1-SNAPSHOT"
 ```
 
-# Examples
+## Examples
 See [Affogato Scala Doc](http://docs.mintpresso.com/affogato).
 
-# Contributors
-@admire93
+## Contributors
+@admire93 @eces
 
-# Further Information
+## Further Information
 You can visit [MINTPRESSO 민트프레소](http://mintpresso.com) official website or go to read more [Examples, User guide & API documentation](http://docs.mintpresso.com).
