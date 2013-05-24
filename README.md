@@ -72,7 +72,7 @@ Also on sbt `Project` dependencies.
 ```
 
 ## Examples
-See [Affogato Scala Doc](http://docs.mintpresso.com/affogato).
+See [Affogato Scala API Doc](http://docs.mintpresso.com/affogato/api).
 
 ## Contributors
 @admire93 @eces
