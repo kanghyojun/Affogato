@@ -9,6 +9,7 @@ import sbt._
 object MyBuild extends Build {
   lazy val root = Project( ... ) dependsOn (
     RootProject(uri("git://github.com/admire93/Affogato.git"))
+    // can use local repo uri("file:////Users/eces/affogato")
   )
 }
 ```
