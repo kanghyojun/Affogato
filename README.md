@@ -61,6 +61,28 @@ $ sbt publish-local
 ```
 Generated documentation will be placed in `target/scala-2.10/api`. Type`open target/scala-2.10/api/index.html` to see.
 
+### Using in console
+Start console in working directory.
+```bash
+~/affogato$ sbt console
+...
+scala> 
+```
+
+Import a package of Affogato and put your API KEY. See your settings first at **[Panel](http://mintpresso.com/login) > Overview > API Setting**. 
+```scala
+scala> import com.mintpresso._
+import com.mintpresso._
+
+scala> val mintpresso: Affogato = Affogato("YOUR_API_KEY_HERE", 1)
+mintpresso: com.mintpresso.Affogato = Affogato(YOUR_API_KEY_HERE, 1)
+
+scala> mintpresso.get(1)
+res0: Option[com.mintpresso.Point] = Some(Point(...))
+```
+Now you can play with MINTPRESSO.
+
+### Using in project
 And then, add a custom resolver to your sbt project.
 ```scala
 resolvers += "Local Repository" at "file://"+Path.userHome.absolutePath+"/.ivy2/local"
@@ -72,7 +94,7 @@ Also on sbt `Project` dependencies.
 ```
 
 ## Examples
-See [Affogato Scala API Doc](http://docs.mintpresso.com/affogato/api).
+See [Affogato Scala Doc](http://docs.mintpresso.com/affogato).
 
 ## Contributors
 @admire93 @eces
