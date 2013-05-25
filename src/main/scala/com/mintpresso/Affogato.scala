@@ -378,7 +378,6 @@ class Affogato(val token: String, val accountId: Long) {
     req.addQueryParameter("subjectType", subjectType)
     req.addQueryParameter("objectType", objectType)
     req.addQueryParameter("verb", verb)
-    req.addQueryParameter("useModels", "true")
 
     subjectId.map { sId =>
       req.addQueryParameter("subjectId", sId.toString) 
