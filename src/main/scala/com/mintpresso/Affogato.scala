@@ -174,7 +174,7 @@ class Affogato(val token: String, val accountId: Long) {
    * scala> affogato.set(Map[String, String]("user" -> "admire9@gmail.com", "name" -> "kanghyojun"))
    * Option[Point] = Some(Point(...))
    *
-   * scala> affogato.set(Map[String, String]('user -> "admire93@gmail.com", 'name -> "kanghyojun"))
+   * scala> affogato.set(Map[Symbol, String]('user -> "admire93@gmail.com", 'name -> "kanghyojun"))
    * Option[Point] = Some(Point(...))
    *
    * }}} 
