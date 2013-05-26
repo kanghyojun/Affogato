@@ -20,7 +20,7 @@ Now you can use **Affogato** by adding it to Project dependencies.
 "com.mintpresso" %% "mintpresso" % "0.1.9"
 ```
 
-
+### Play Framework 2
 If you're using Play Framework 2, edit `project/Build.scala`.
 ```scala
   val appDependencies = Seq(
@@ -35,6 +35,39 @@ If you're using Play Framework 2, edit `project/Build.scala`.
     RootProject(uri("git://github.com/admire93/affogato.git"))
   )
 ```
+
+We can export your API key to `conf/application.conf`. This configuration makes you feel happy when you deploy on several servers or use multiple keys.
+```json
+# one key and id pair
+mintpresso.api=YOUR_API_KEY_HERE
+mintpresso.id=1
+
+# many pairs
+mintpresso {
+  internal {
+    api=API_KEY_FOR_SECURED_OPERATION
+    id=1000
+  }
+  external {
+    api=API_KEY_FOR_READONLY
+    id=1000
+  }
+}
+```
+
+
+Initialze affogato variable in any `Controller` or `Model` code.
+```scala
+val mintpresso: Affogato = Affogato( 
+  Play.configuration.getString("mintpresso.api").getOrElse(""),
+  Play.configuration.getLong("mintpresso.id").getOrElse(0L)
+)
+/*
+  It works but not DRY.
+  val mintpresso: Affogato = Affogato( "YOUR_API_KEY_HERE", 0 )
+*/
+```
+Creating wrapper class like `AffogatoController` is somehow useful.
 
 ## Advanced Use
 Clone this repository first.
