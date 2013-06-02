@@ -288,8 +288,7 @@ class Affogato(val token: String, val accountId: Long) {
           }
         }
       }
-
-      ResultSet(set(typeIdentifier._1, typeIdentifier._2, compact(render(data))))
+      set(typeIdentifier._1, typeIdentifier._2, compact(render(data)))
     } else {
       var sP: (String, String) = null
       var verb: String = null
@@ -304,7 +303,7 @@ class Affogato(val token: String, val accountId: Long) {
         }
       }
 
-      ResultSet(set(sP._1, sP._2, verb, oP._1, oP._2))
+      set(sP._1, sP._2, verb, oP._1, oP._2)
     }
   }
 

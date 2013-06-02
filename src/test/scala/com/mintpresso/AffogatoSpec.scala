@@ -3,7 +3,7 @@ package com.mintpresso.spec
 import org.specs2.mutable._
 import com.mintpresso._
 
-import scala.util.Try
+import scala.collection.mutable.LinkedHashMap
 
 class AffogatoSpec extends Specification {
   
@@ -24,13 +24,14 @@ class AffogatoSpec extends Specification {
 
       val affogato = Affogato(apiKey)
         
-      affogato.set(
+      val res = affogato.set(
         _type="tuser", 
         identifier=userIdentifier, 
         data="""{
           "name": "khs",
           "age": "22"
-        }""").fold(
+        }""")
+      res.fold(
           e => {
             println(e.messages)
             false === true
@@ -40,29 +41,48 @@ class AffogatoSpec extends Specification {
           }
         )
     }
-    /*
 
-    "Add a point with Map[String, String]" in {
+    "Add a point with LinkedHashMap[String, String]" in {
       val affogato = Affogato(apiKey)
 
-      affogato.set(Map[String, String](
-        "user" -> userIdentifier,
+      val res: ResultSet = affogato.set(LinkedHashMap[String, String](
+        "tuser" -> userIdentifier,
         "name" -> "khs",
         "age" -> "22"
-      )).as[Point] must beSome
+      ))
+      
+      res.fold(
+        e => {
+          println(e.messages)
+          false === true
+        },
+        (s: Point) => {
+          s.identifier === userIdentifier
+        }
+      )
 
     }
 
-    "Add a point with Map[Symbol, String]" in {
+    "Add a point with LinkedHashMap[Symbol, String]" in {
       val affogato = Affogato(apiKey)
-
-      affogato.set(Map[Symbol, String](
-        'user  -> userIdentifier,
+      val res = affogato.set(LinkedHashMap[Symbol, String](
+        'tuser  -> userIdentifier,
         'name -> "khs",
         'age -> "22"
-      )).as[Option[Point]] must beSome
+      ))
+      
+      res.fold(
+        e => {
+          println(e.messages)
+          false === true
+        },
+        (s: Point) => {
+          s.identifier === userIdentifier
+        }
+      )
     }
 
+    /*
     "Add a point with Point" in {
       val affogato = Affogato(apiKey)
 
