@@ -15,6 +15,7 @@ package com.mintpresso
   */
 
 import scala.language.implicitConversions
+import scala.collection.mutable.LinkedHashMap
 import java.util.Date
 
 import com.typesafe.config._
@@ -194,7 +195,7 @@ class Affogato(val token: String, val accountId: Long) {
    * @return a Map[String, String]
    *
    */
-  implicit def tToMap[T](m: Map[T, String]): Map[String, String] = m.map { a =>
+  implicit def tToStringMap[T](m: LinkedHashMap[T, String]): LinkedHashMap[String, String] = m.map { a =>
     a._1 match {
       case x: String => (x -> a._2)
       case x: Symbol => (x.name -> a._2)
