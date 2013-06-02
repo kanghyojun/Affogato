@@ -47,8 +47,89 @@ case class Point(id: Long, _type: String, identifier: String,
  */
 case class Edge(subject: Point, verb: String, _object: Point, url: String, createdAt: BigInt)
 
-case class ResultSet(result: Any) {
-  def as[T]: T = result.asInstanceOf[T]
+/** Contain Error messages when request failed. if set or get has 400 request or 401 request, type of ResultSet.result will be AffogatoError
+ *
+ * {{{
+ * scala> ResultSet(AffogatoError(Seq("Some message"))).as[AffogatoError]
+ * AffogatoError = AffogatoError(List(Some message))
+ *
+ * }}}
+ */
+case class AffogatoError(messages: Seq[String])
+
+/** A result from every get,set method in Affogato. Affogato.get or Affogato.set SHOULD return ResultSet
+ *
+ * {{{
+ * scala> val res = ResultSet(1L)
+ * res: ResultSet = ResultSet
+ *
+ * scala> res.fold(
+ *      |   e => println(error),
+ *      |   (s: Long) => println(s)
+ *      | )
+ *
+ * }}}
+ */
+object ResultSet {
+  def apply[T: scala.reflect.runtime.universe.TypeTag](result: T): ResultSet = {
+    return new ResultSet(result, scala.reflect.runtime.universe.typeOf[T])
+  }
+}
+
+/** ResultSet class
+ *
+ * @param result result of request
+ * @param ev Type of result can be get from TypeTag
+ *
+ */
+class ResultSet(result: Any, ev: scala.reflect.runtime.universe.Type) {
+  import scala.reflect.runtime.universe._
+
+  /** Convert result as given type A. if A isn't appropriate Type for result, AffogatoConversionException will throw.
+   *
+   * {{{
+   * scala> val res = ResultSet(1L)
+   * res: ResultSet = ResultSet
+   *
+   * scala> res.as[Long]
+   * 1
+   *
+   * scala> res.as[Double]
+   * AffogatoConversionException: ResultSet.result cannot be converted Double
+   *
+   * }}}
+   *
+   */
+  def as[A: TypeTag] = {
+    if(ev =:= typeOf[A]) {
+      result.asInstanceOf[A]
+    } else {
+      val targ = typeOf[A] match { case TypeRef(_, _, args) => args }
+      val msg = s"ResultSet.result cannot be converted $targ"
+      throw new AffogatoConversionException(msg)
+    }
+  }
+
+  /** Handling result, type of result T must given.
+   *
+   * {{{
+   * scala> val res = ResultSet(1L)
+   * res: ResultSet = ResultSet
+   *
+   * scala> res.fold(
+   *      |   e => println(error),
+   *      |   (s: Long) => println(s)
+   *      | )
+   *
+   * }}}
+   */
+  def fold[R, T: TypeTag](e: AffogatoError => R, s: T => R): R = {
+    if(typeOf[AffogatoError] =:= ev) {
+      e(this.as[AffogatoError])
+    } else {
+      s(this.as[T])
+    }
+  }
 }
 
 /** Affogato is a Mintpresso Scala API Pack.
