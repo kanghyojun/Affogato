@@ -108,7 +108,8 @@ class ResultSet(result: Any, ev: scala.reflect.runtime.universe.Type) {
       result.asInstanceOf[A]
     } else {
       val targ = typeOf[A] match { case TypeRef(_, _, args) => args }
-      val msg = s"ResultSet.result cannot be converted $targ"
+      val arg = ev match { case TypeRef(_, _, args) => args}
+      val msg = s"ResultSet.result: $arg cannot be converted $targ"
       throw new AffogatoConversionException(msg)
     }
   }
