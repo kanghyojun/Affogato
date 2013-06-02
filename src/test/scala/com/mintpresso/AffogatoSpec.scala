@@ -3,10 +3,12 @@ package com.mintpresso.spec
 import org.specs2.mutable._
 import com.mintpresso._
 
+import scala.util.Try
+
 class AffogatoSpec extends Specification {
   
-  val token = "240ff06dee7-f79f-423f-9684-0cedd2c13ef3"
-  val accountId = 240
+  val token = "3086671fe6f0-ca84-480b-9cec-0b84fd633ef6"
+  val accountId = 3086
   val apiKey = "%s::%d".format(token, accountId)
   val userIdentifier = "admire93"
   
@@ -21,15 +23,24 @@ class AffogatoSpec extends Specification {
     "Add a point" in {
 
       val affogato = Affogato(apiKey)
-
+        
       affogato.set(
-        _type="user", 
+        _type="tuser", 
         identifier=userIdentifier, 
         data="""{
           "name": "khs",
           "age": "22"
-        }""") must beSome
+        }""").fold(
+          e => {
+            println(e.messages)
+            false === true
+          },
+          (s: Point) => {
+            s.identifier === userIdentifier
+          }
+        )
     }
+    /*
 
     "Add a point with Map[String, String]" in {
       val affogato = Affogato(apiKey)
@@ -38,7 +49,7 @@ class AffogatoSpec extends Specification {
         "user" -> userIdentifier,
         "name" -> "khs",
         "age" -> "22"
-      )).as[Option[Point]] must beSome
+      )).as[Point] must beSome
 
     }
 
@@ -234,5 +245,6 @@ class AffogatoSpec extends Specification {
         data=invalidJson
       ) must throwA[AffogatoInvalidJsonException]
     }
+  */
   }
 }
