@@ -23,6 +23,23 @@ import dispatch._
 import net.liftweb.json._
 import net.liftweb.json.JsonDSL._
 
+import scala.reflect.runtime.universe.{TypeTag, Type, TypeRef, typeOf}
+
+class Respond {
+  var code: BigInt = null
+  var message: String = null
+
+  def setStatus(c: BigInt, m: String) = {
+    code = c
+    message = m
+  }
+
+  def setStatus(d: (BigInt, String)) = {
+    code = d._1
+    message = d._2
+  }
+}
+
 /** Represent a mintpresso point.
  *
  * @param id mintpresso point id.
@@ -35,9 +52,10 @@ import net.liftweb.json.JsonDSL._
  * @param createdAt created time, unixtimestamp
  *
  */
-case class Point(id: Long, _type: String, identifier: String,
+case class Point(id: BigInt, _type: String, identifier: String,
                  data: String, _url: String, createdAt: BigInt,
-                 updatedAt: BigInt, referencedAt: BigInt) 
+                 updatedAt: BigInt, referencedAt: BigInt) extends Respond
+
 /** Represent a mintpresso edge. edge define realation between a points.
  *
  * @param subject a subject point.
@@ -48,91 +66,24 @@ case class Point(id: Long, _type: String, identifier: String,
  * @param url created time, unix timestamp
  *
  */
-case class Edge(subject: Point, verb: String, _object: Point, url: String, createdAt: BigInt)
+case class Edge(subject: Point, verb: String, _object: Point,
+                url: String, createdAt: BigInt) extends Respond
 
-/** Contain Error messages when request failed. if set or get has 400 request or 401 request, type of ResultSet.result will be AffogatoError
- *
- * {{{
- * scala> ResultSet(AffogatoError(Seq("Some message"))).as[AffogatoError]
- * AffogatoError = AffogatoError(List(Some message))
- *
- * }}}
- */
-case class AffogatoError(messages: Seq[String])
-
-/** A result from every get,set method in Affogato. Affogato.get or Affogato.set SHOULD return ResultSet
- *
- * {{{
- * scala> val res = ResultSet(1L)
- * res: ResultSet = ResultSet
- *
- * scala> res.fold(
- *      |   e => println(error),
- *      |   (s: Long) => println(s)
- *      | )
- *
- * }}}
- */
-object ResultSet {
-  def apply[T: scala.reflect.runtime.universe.TypeTag](result: T): ResultSet = {
-    return new ResultSet(result, scala.reflect.runtime.universe.typeOf[T])
-  }
-}
-
-/** ResultSet class
- *
- * @param result result of request
- * @param ev Type of result can be get from TypeTag
- *
- */
-class ResultSet(result: Any, ev: scala.reflect.runtime.universe.Type) {
-  import scala.reflect.runtime.universe._
-
-  /** Convert result as given type A. if A isn't appropriate Type for result, AffogatoConversionException will throw.
-   *
-   * {{{
-   * scala> val res = ResultSet(1L)
-   * res: ResultSet = ResultSet
-   *
-   * scala> res.as[Long]
-   * 1
-   *
-   * scala> res.as[Double]
-   * AffogatoConversionException: ResultSet.result cannot be converted Double
-   *
-   * }}}
-   *
-   */
-  def as[A: TypeTag] = {
-    if(ev =:= typeOf[A]) {
-      result.asInstanceOf[A]
-    } else {
-      val targ = typeOf[A] match { case TypeRef(_, _, args) => args }
-      val arg = ev match { case TypeRef(_, _, args) => args}
-      val msg = s"ResultSet.result: $arg cannot be converted $targ"
-      throw new AffogatoConversionException(msg)
-    }
+case class AffogatoResult(var result: Any) {
+  def as[T] = result.asInstanceOf[Either[Respond, T]] match {
+    case Right(d) => d
+    case Left(a) => throw new AffogatoConversionException(s"Conversion Failed :`( found: $a require: $result")
   }
 
-  /** Handling result, type of result T must given.
-   *
-   * {{{
-   * scala> val res = ResultSet(1L)
-   * res: ResultSet = ResultSet
-   *
-   * scala> res.fold(
-   *      |   e => println(error),
-   *      |   (s: Long) => println(s)
-   *      | )
-   *
-   * }}}
-   */
-  def fold[R, T: TypeTag](e: AffogatoError => R, s: T => R): R = {
-    if(typeOf[AffogatoError] =:= ev) {
-      e(this.as[AffogatoError])
-    } else {
-      s(this.as[T])
-    }
+  def fold[R, T](err: Respond => R, success: T => R): R = {
+    try {
+      result.asInstanceOf[Either[Respond, T]] match {
+        case Right(d) => success(d)
+        case Left(e) => err(e)
+      }
+    } catch {
+      case e: Exception => throw new Exception("Unexpected exception occured. AffogatoResult MUST be Either[Respond, T]")
+    } 
   }
 }
 
@@ -203,22 +154,28 @@ class Affogato(val token: String, val accountId: Long) {
       case x => throw new Exception(x.getClass.toString() + " is invalid type for Affogato.set(Map[T,String])")
     }
   }
+
+  private def fail(code: BigInt, url: String) = {
+    val resp = new Respond()
+    resp.setStatus(code, s"HTTP request failed in url: $url.")
+    Left(resp)
+  }
   
   /** Add a point to mintpresso
    *
    * {{{
    * scala> affogato.set("user", "admire9@gmail.com")
-   * ResultSet = ResultSet(Point(...))
+   * Either[Respond, Point] = Right(Point(...))
    *
    * }}} 
    *
    * @param _type type of point
    * @param identifier identifier of point
    * @param data additional data of point
-   * @return a ResultSet if request success, it will return ResultSet.result: Point
+   * @return a AffogatoResult if request success, it will return ResultSet.result: Point
    *
    */
-  def set(_type: String, identifier: String, data: String = "{}"): ResultSet = {
+  def set(_type: String, identifier: String, data: String = "{}"): Either[Respond, Point] = {
     val parsedData = parse(data)
     if(parsedData == JNothing) throw new AffogatoInvalidJsonException("A point data is invalid. data: String = %s".format(data))
 
@@ -240,15 +197,16 @@ class Affogato(val token: String, val accountId: Long) {
       val json = parse(res)
       val status = statusRead(json).head
       if(status._1 == 201 || status._1 == 200) {
-        ResultSet(pointRead(json).head)
+        val p = pointRead(json).head
+        p.setStatus(status)
+        Right(p)
       } else {
-        ResultSet(AffogatoError(Seq(s"$status.head._2",
-                                    s"code: $status.head._1")))
-
+        val resp = new Respond()
+        resp.setStatus(status)
+        Left(resp)
       } 
     }.getOrElse {
-      ResultSet(AffogatoError(Seq(s"HTTP request failed. url: $postPointURI", 
-                                  s"maybe token $token is invalid.")))
+      fail(500, postPointURI)
     }
   }
   
@@ -259,18 +217,18 @@ class Affogato(val token: String, val accountId: Long) {
    * scala.collection.mutable.LinkedHashMap
    *
    * scala> affogato.set(LinkedHashMap[String, String]("user" -> "admire9@gmail.com", "name" -> "kanghyojun"))
-   * ResultSet = ResultSet(Point(...))
+   * AffogatoResult = AffogatoResult(Point(...))
    *
    * scala> affogato.set(Map[Symbol, String]('user -> "admire93@gmail.com", 'name -> "kanghyojun"))
-   * ResultSet = ResultSet(Point(...))
+   * AffogatoResult = AffogatoResult(Point(...))
    *
    * }}} 
    *
    * @param d LinkedHashMap 
-   * @return ResultSet(Point(...))
+   * @return AffogatoResult(Point(...))
    *
    */
-  def set[T](d: LinkedHashMap[T, String]): ResultSet = { 
+  def set[T](d: LinkedHashMap[T, String]): AffogatoResult = { 
     val stringMap: LinkedHashMap[String, String] = d
 
     if((stringMap.keySet & verbSet).isEmpty) {
@@ -288,7 +246,7 @@ class Affogato(val token: String, val accountId: Long) {
           }
         }
       }
-      set(typeIdentifier._1, typeIdentifier._2, compact(render(data)))
+      AffogatoResult(set(typeIdentifier._1, typeIdentifier._2, compact(render(data))))
     } else {
       var sP: (String, String) = null
       var verb: String = null
@@ -303,7 +261,7 @@ class Affogato(val token: String, val accountId: Long) {
         }
       }
 
-      set(sP._1, sP._2, verb, oP._1, oP._2)
+      AffogatoResult(set(sP._1, sP._2, verb, oP._1, oP._2))
     }
   }
 
@@ -316,10 +274,10 @@ class Affogato(val token: String, val accountId: Long) {
    * }}} 
    *
    * @param point [[com.mintpresso.Point]] instance 
-   * @return a Option[Point]
+   * @return 
    *
    */
-  def set(point: Point): ResultSet = { 
+  def set(point: Point): Either[Respond, Point] = { 
     set(point._type, point.identifier, point.data)
   }
 
@@ -342,7 +300,7 @@ class Affogato(val token: String, val accountId: Long) {
    *
    */
   def set(subjectType: String, subjectIdentifier: String, verb: String,
-          objectType: String, objectIdentifier: String): ResultSet = {
+          objectType: String, objectIdentifier: String): Either[Respond, Boolean] = {
     val edge = 
       ("edge" -> 
         ("subjectId" -> subjectIdentifier) ~
@@ -366,12 +324,9 @@ class Affogato(val token: String, val accountId: Long) {
         JField("code", JInt(code)) <- status
       } yield code
 
-      ResultSet(true)
-
+      Right(true)
     }.getOrElse {
-      ResultSet(AffogatoError(Seq(s"HTTP request failed. url: $addEdgeURI",
-                                  s"maybe token $token is invalid.")))
-
+      Left(new Respond())
     }
   }
   
@@ -389,7 +344,7 @@ class Affogato(val token: String, val accountId: Long) {
    * @return ResultSet(Edge(...))
    *
    */
-  def set(subject: Point, verb: String, _object: Point): ResultSet = {
+  def set(subject: Point, verb: String, _object: Point): Either[Respond, Boolean] = {
     val edge = 
       ("edge" -> 
         ("subjectId" -> subject.identifier) ~
@@ -415,10 +370,9 @@ class Affogato(val token: String, val accountId: Long) {
       } yield (code, message)
       // Fix it
 
-      ResultSet(true)
+      Right(true)
     }.getOrElse {
-      ResultSet(AffogatoError(Seq(s"HTTP request failed. url: $addEdgeURI", 
-                                  s"maybe token $token is invalid.")))
+      fail(500, addEdgeURI)
     }
   }
   /** Get a point by id
@@ -458,7 +412,7 @@ class Affogato(val token: String, val accountId: Long) {
    * @return a Option[point] if point is exist, Some(Point) will return.
    *
    */
-  def get(_type: String, identifier: String): ResultSet = {
+  def get(_type: String, identifier: String): Either[Respond, Point] = {
     val getPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
     var req = url(getPointURI)
     req.addQueryParameter("api_token", token)
@@ -478,9 +432,9 @@ class Affogato(val token: String, val accountId: Long) {
         JField("updatedAt", JInt(ua)) <- point 
         JField("referencedAt", JInt(ra)) <- point 
       } yield Point(i.toLong, t, iden, compact(render(data)), u, ca, ua, ra)
-      ResultSet(Some(point.head))
+      Right(point.head)
     }.getOrElse {
-      ResultSet(None)
+      fail(500, getPointURI)
     }
   }
 
@@ -589,17 +543,19 @@ class Affogato(val token: String, val accountId: Long) {
 
   override def toString(): String = "Affogato(%1$s, %2$s)".format(token , accountId)
   
-  private def pointRead(json: JValue): Iterable[Point] = {
+  private def pointRead(json: JValue): List[Point] = {
     var now = new Date()
     var time = now.getTime() 
-    for {
+    val res = for {
       JField("point", point) <- json
       JField("id", JInt(i)) <- point 
       JField("type", JString(t)) <- point 
       JField("identifier", JString(iden)) <- point 
       JField("data", JObject(data)) <- point
       JField("_url", JString(u)) <- point
-    } yield Point(i.toLong, t, iden, compact(render(data)), u, time, time, time)
+    } yield new Point(i.toLong, t, iden, compact(render(data)), u, time, time, time)
+
+    res.toList
   }
 
   private def statusRead(json: JValue): Iterable[(BigInt, String)] = for {

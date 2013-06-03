@@ -6,12 +6,17 @@ import com.mintpresso._
 import scala.collection.mutable.LinkedHashMap
 
 class AffogatoSpec extends Specification {
-  
   val token = "3086671fe6f0-ca84-480b-9cec-0b84fd633ef6"
   val accountId = 3086
   val apiKey = "%s::%d".format(token, accountId)
   val userIdentifier = "admire93"
-  
+
+  val eitherPointMatcher = (r: Either[Respond, Point]) => r must beRight
+  val resultPointMatcher = (r: AffogatoResult) => r.fold(
+    e => false === true,
+    (p: Point) => p.identifier === userIdentifier
+  )
+
   "Mintpresso API Pack" should {
     
     "Can init accountId" in {
@@ -31,36 +36,21 @@ class AffogatoSpec extends Specification {
           "name": "khs",
           "age": "22"
         }""")
-      res.fold(
-          e => {
-            println(e.messages)
-            false === true
-          },
-          (s: Point) => {
-            s.identifier === userIdentifier
-          }
-        )
+
+      eitherPointMatcher(res)
     }
+
 
     "Add a point with LinkedHashMap[String, String]" in {
       val affogato = Affogato(apiKey)
 
-      val res: ResultSet = affogato.set(LinkedHashMap[String, String](
+      val res: AffogatoResult = affogato.set(LinkedHashMap[String, String](
         "tuser" -> userIdentifier,
         "name" -> "khs",
         "age" -> "22"
       ))
-      
-      res.fold(
-        e => {
-          println(e.messages)
-          false === true
-        },
-        (s: Point) => {
-          s.identifier === userIdentifier
-        }
-      )
 
+      resultPointMatcher(res)
     }
 
     "Add a point with LinkedHashMap[Symbol, String]" in {
@@ -71,24 +61,15 @@ class AffogatoSpec extends Specification {
         'age -> "22"
       ))
       
-      res.fold(
-        e => {
-          println(e.messages)
-          false === true
-        },
-        (s: Point) => {
-          s.identifier === userIdentifier
-        }
-      )
+      resultPointMatcher(res) 
     }
 
-    /*
     "Add a point with Point" in {
       val affogato = Affogato(apiKey)
 
-      affogato.set(Point(
+      val res = affogato.set(Point(
         -1,
-        "user",
+        "tuser",
         userIdentifier,
         """{
           "name": "khs",
@@ -98,20 +79,12 @@ class AffogatoSpec extends Specification {
         0,
         0,
         0
-      )) must beSome
+      ))
+
+      eitherPointMatcher(res)
     }
 
-
-    "Return a Point when add a point" in {
-      val affogato = Affogato(apiKey)
-      affogato.set(
-        _type="user", 
-        identifier=userIdentifier
-      ).map { point =>
-        (point._type, point.identifier)
-      } === Some(("user", userIdentifier))
-    }
-
+    /*
     "Get a Point" in {
       val affogato = Affogato(apiKey)
       affogato.get("user", userIdentifier).as[Option[Point]] must beSome[Point].which { p =>
