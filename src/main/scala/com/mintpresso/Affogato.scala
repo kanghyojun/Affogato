@@ -294,7 +294,7 @@ class Affogato(val token: String, val accountId: Long) {
    *
    */
   def set(subjectType: String, subjectIdentifier: String, verb: String,
-          objectType: String, objectIdentifier: String): Either[Respond, Boolean] = {
+          objectType: String, objectIdentifier: String): Either[Respond, Edge] = {
     val edge = 
       ("edge" -> 
         ("subjectId" -> subjectIdentifier) ~
@@ -304,23 +304,20 @@ class Affogato(val token: String, val accountId: Long) {
         ("verb" -> verb))
 
     val addEdgeURI = uri(affogatoConf("mintpresso.url.edge").format(accountId))
-    val req = url(addEdgeURI).POST
+    implicit var req = url(addEdgeURI).POST
     req << compact(render(edge))
     req.addQueryParameter("api_token", token)     
     req.addHeader("Content-Type", "application/json;charset=utf-8")    
     req.setBodyEncoding("utf-8")
 
-    Http(req OK as.String).option().map { res =>
-      val d: JValue = parse(res)
-
-      val r = for {
-        JObject(status) <- d \\ "status"
-        JField("code", JInt(code)) <- status
-      } yield code
-
-      Right(true)
-    }.getOrElse {
-      Left(new Respond(500, ""))
+    Request[Edge] { implicit status => json =>
+      Right(Edge(
+        Point(-1, subjectType, subjectIdentifier, "", "", 0, 0, 0),
+        verb,
+        Point(-1, objectType, objectIdentifier, "", "", 0, 0, 0),
+        "",
+        0
+      ))
     }
   }
   
@@ -338,7 +335,7 @@ class Affogato(val token: String, val accountId: Long) {
    * @return ResultSet(Edge(...))
    *
    */
-  def set(subject: Point, verb: String, _object: Point): Either[Respond, Boolean] = {
+  def set(subject: Point, verb: String, _object: Point): Either[Respond, Edge] = {
     val edge = 
       ("edge" -> 
         ("subjectId" -> subject.identifier) ~
@@ -348,25 +345,14 @@ class Affogato(val token: String, val accountId: Long) {
         ("verb" -> verb))
 
     val addEdgeURI = uri(affogatoConf("mintpresso.url.edge").format(accountId))
-    val req = url(addEdgeURI).POST
+    implicit val req = url(addEdgeURI).POST
     req << compact(render(edge))
     req.addQueryParameter("api_token", token)     
     req.addHeader("Content-Type", "application/json;charset=utf-8")    
     req.setBodyEncoding("utf-8")
 
-    Http(req OK as.String).option().map { res =>
-      val d: JValue = parse(res)
-
-      val r = for {
-        JObject(status) <- d \ "status"
-        JField("code", JInt(code)) <- status
-        JField("message", JString(message)) <- status
-      } yield (code, message)
-      // Fix it
-
-      Right(true)
-    }.getOrElse {
-      Left(new Respond(500, ""))
+    Request[Edge] { implicit status => json =>
+      Right(Edge(subject, verb, _object, "", 0))
     }
   }
   /** Get a point by id

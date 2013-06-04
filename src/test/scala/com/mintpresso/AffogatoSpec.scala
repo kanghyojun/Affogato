@@ -16,6 +16,10 @@ class AffogatoSpec extends Specification {
     e => false === true,
     (p: Point) => p.identifier === userIdentifier
   )
+  val resultEdgeMatcher = (r: AffogatoResult) => r.fold(
+    e => false === true,
+    (e: Edge) => true === true 
+  )
 
   "Mintpresso API Pack" should {
     
@@ -95,54 +99,61 @@ class AffogatoSpec extends Specification {
       val affogato = Affogato(apiKey)
       eitherPointMatcher(affogato.get("tuser", userIdentifier))
     }
-
-    /*
-
+    
     "Add a Edge" in {
       val affogato = Affogato(apiKey)
 
-      affogato.set("user", userIdentifier) must beSome
-      affogato.set("music", "bugs-1") must beSome
+      affogato.set("tuser", userIdentifier)
+      affogato.set("music", "bugs-1")
 
-      val res = affogato.set(
-        subjectType="user",
+      affogato.set(
+        subjectType="tuser",
         subjectIdentifier=userIdentifier,
         verb="listen",
         objectType="music",
         objectIdentifier="bugs-1"
+      ) must beRight
+    }
+    
+    "Add a Edge by class" in {
+      val affogato = Affogato(apiKey)
+      var e: Either[Respond, Edge] = null
+
+      for (
+        u <- affogato.set("tuser", userIdentifier).right;
+        m <- affogato.set("music", "bugs-1").right
+      ) {
+        e = affogato.set(u, verb="listen", m)
+      }
+
+      e must beRight
+    }
+
+    "Add a Edge with LinkedHashMap[String, String]" in {
+      val affogato = Affogato(apiKey)
+
+      resultEdgeMatcher(
+        affogato.set(LinkedHashMap[String, String](
+          "tuser" -> userIdentifier,
+          "do" -> "listen",
+          "music" -> "bugs-1"
+        ))
       )
-      res === true
     }
 
-    "Add a Edge with Map[String, String]" in {
+    "Add a Edge with LinkedHashMap[Symbol, String]" in {
       val affogato = Affogato(apiKey)
-
-      affogato.set("user", userIdentifier) must beSome
-      affogato.set("music", "bugs-1") must beSome
-
-      val res = affogato.set(Map[String, String](
-        "user" -> userIdentifier,
-        "do" -> "listen",
-        "music" -> "bugs-1"
-      )).as[Boolean]
-
-      res === true
+      resultEdgeMatcher(
+        affogato.set(LinkedHashMap[Symbol, String](
+          'tuser -> userIdentifier,
+          'do -> "listen",
+          'music -> "bugs-1"
+        ))
+      )
     }
 
-    "Add a Edge with Map[Symbol, String]" in {
-      val affogato = Affogato(apiKey)
-
-      affogato.set("user", userIdentifier) must beSome
-      affogato.set("music", "bugs-1") must beSome
-
-      val res = affogato.set(Map[Symbol, String](
-        'user -> userIdentifier,
-        'do -> "listen",
-        'music -> "bugs-1"
-      )).as[Boolean]
-
-      res === true
-    }
+    /*
+    
 
     "Get a Edge" in {
       val affogato = Affogato(apiKey)
