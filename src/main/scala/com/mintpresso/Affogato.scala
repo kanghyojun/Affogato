@@ -16,27 +16,20 @@ package com.mintpresso
 
 import scala.language.implicitConversions
 import scala.collection.mutable.LinkedHashMap
-import java.util.Date
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import com.typesafe.config._
 import dispatch._
 import net.liftweb.json._
 import net.liftweb.json.JsonDSL._
 
+
 import scala.reflect.runtime.universe.{TypeTag, Type, TypeRef, typeOf}
 
-class Respond {
-  var code: BigInt = null
-  var message: String = null
-
-  def setStatus(c: BigInt, m: String) = {
-    code = c
-    message = m
-  }
-
-  def setStatus(d: (BigInt, String)) = {
-    code = d._1
-    message = d._2
+class Respond(var code: BigInt = 0, var message: String = "") {
+  def setStatus(s: (BigInt, String)) = {
+    code = s._1
+    message = s._2
   }
 }
 
@@ -52,9 +45,10 @@ class Respond {
  * @param createdAt created time, unixtimestamp
  *
  */
-case class Point(id: BigInt, _type: String, identifier: String,
-                 data: String, _url: String, createdAt: BigInt,
-                 updatedAt: BigInt, referencedAt: BigInt) extends Respond
+case class Point(id: BigInt, _type: String,
+                 identifier: String, data: String, _url: String, 
+                 createdAt: BigInt, updatedAt: BigInt, 
+                 referencedAt: BigInt) extends Respond
 
 /** Represent a mintpresso edge. edge define realation between a points.
  *
@@ -90,6 +84,7 @@ case class AffogatoResult(var result: Any) {
 /** Affogato is a Mintpresso Scala API Pack.
  */ 
 object Affogato {
+
   val separator = "::" 
 
   def apply(token: String, accountId: Long): Affogato = new Affogato(token, accountId)
@@ -153,18 +148,28 @@ class Affogato(val token: String, val accountId: Long) {
       case x: Symbol => (x.name -> a._2)
       case x => throw new Exception(x.getClass.toString() + " is invalid type for Affogato.set(Map[T,String])")
     }
-  }
+  }  
 
-  private def fail(code: BigInt, url: String) = {
-    val resp = new Respond()
-    resp.setStatus(code, s"HTTP request failed in url: $url.")
-    Left(resp)
+  private def Request[T](f: ((BigInt, String)) => JValue => Either[Respond, T])(implicit req: com.ning.http.client.RequestBuilder): Either[Respond, T] = {
+    Http(req OK as.String).either() match {
+      case Right(r: String) => {
+        val json = parse(r)
+        val status = statusRead(json).head
+        if(status._1 == 201 || status._1 == 200) {
+          f(status)(json)
+        } else {
+          Left(new Respond(status._1, status._2))
+        }
+      }
+      case Left(err: StatusCode) => Left(new Respond(err.code, err.getMessage))
+      case Left(e) => Left(new Respond(500, e.getMessage))
+    }
   }
   
   /** Add a point to mintpresso
    *
    * {{{
-   * scala> affogato.set("user", "admire9@gmail.com")
+   * scala> affogato.set("user", "admire9@gmail.com"r
    * Either[Respond, Point] = Right(Point(...))
    *
    * }}} 
@@ -187,26 +192,15 @@ class Affogato(val token: String, val accountId: Long) {
 
     val additionalData: String = compact(render(point))
     val postPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
-    var req = url(postPointURI).POST
+    implicit var req = url(postPointURI).POST
     req = req.addQueryParameter("api_token", token)
     req = req.addHeader("Content-Type", "application/json;charset=utf-8")
     req = req << additionalData
     req.setBodyEncoding("utf-8")
-    
-    Http(req OK as.String).option().map { res =>
-      val json = parse(res)
-      val status = statusRead(json).head
-      if(status._1 == 201 || status._1 == 200) {
-        val p = pointRead(json).head
-        p.setStatus(status)
-        Right(p)
-      } else {
-        val resp = new Respond()
-        resp.setStatus(status)
-        Left(resp)
-      } 
-    }.getOrElse {
-      fail(500, postPointURI)
+
+    Request[Point] { implicit status => json =>
+      val p = pointRead(json)
+      Right(p.head)
     }
   }
   
@@ -326,7 +320,7 @@ class Affogato(val token: String, val accountId: Long) {
 
       Right(true)
     }.getOrElse {
-      Left(new Respond())
+      Left(new Respond(500, ""))
     }
   }
   
@@ -372,7 +366,7 @@ class Affogato(val token: String, val accountId: Long) {
 
       Right(true)
     }.getOrElse {
-      fail(500, addEdgeURI)
+      Left(new Respond(500, ""))
     }
   }
   /** Get a point by id
@@ -381,27 +375,13 @@ class Affogato(val token: String, val accountId: Long) {
    * @return a ResultSet if point is exist, ResultSet(Option[Point]) will return.
    *
    */
-  def get(id: Long): Option[Point] = {
+  def get(id: Long): Either[Respond, Point] = {
     val getPointURI = uri(affogatoConf("mintpresso.url.point.find.id").format(accountId, id))
-    var req = url(getPointURI)
+    implicit var req = url(getPointURI)
     req.addQueryParameter("api_token", token)
 
-    Http(req OK as.String).option().map { res =>
-      val json = parse(res)
-      val point = for {
-        JObject(point) <- json \ "point"
-        JField("id", JInt(i)) <- point 
-        JField("type", JString(t)) <- point 
-        JField("identifier", JString(iden)) <- point 
-        JField("data", JObject(data)) <- point
-        JField("_url", JString(u)) <- point
-        JField("createdAt", JInt(ca)) <- point 
-        JField("updatedAt", JInt(ua)) <- point 
-        JField("referencedAt", JInt(ra)) <- point 
-      } yield Point(i.toLong, t, iden, compact(render(data)), u, ca, ua, ra)
-      Some(point.head)
-    }.getOrElse {
-      None
+    Request[Point] { implicit status => json =>
+      Right(pointRead(json).head)
     }
   }
 
@@ -414,27 +394,13 @@ class Affogato(val token: String, val accountId: Long) {
    */
   def get(_type: String, identifier: String): Either[Respond, Point] = {
     val getPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
-    var req = url(getPointURI)
+    implicit var req = url(getPointURI)
     req.addQueryParameter("api_token", token)
     req.addQueryParameter("type", _type)
     req.addQueryParameter("identifier", identifier)
 
-    Http(req OK as.String).option().map { res =>
-      val json = parse(res)
-      val point = for {
-        JObject(point) <- json \ "point"
-        JField("id", JInt(i)) <- point 
-        JField("type", JString(t)) <- point 
-        JField("identifier", JString(iden)) <- point 
-        JField("data", JObject(data)) <- point
-        JField("_url", JString(u)) <- point
-        JField("createdAt", JInt(ca)) <- point 
-        JField("updatedAt", JInt(ua)) <- point 
-        JField("referencedAt", JInt(ra)) <- point 
-      } yield Point(i.toLong, t, iden, compact(render(data)), u, ca, ua, ra)
-      Right(point.head)
-    }.getOrElse {
-      fail(500, getPointURI)
+    Request[Point] { implicit status => json =>
+      Right(pointRead(json).head)
     }
   }
 
@@ -543,26 +509,30 @@ class Affogato(val token: String, val accountId: Long) {
 
   override def toString(): String = "Affogato(%1$s, %2$s)".format(token , accountId)
   
-  private def pointRead(json: JValue): List[Point] = {
-    var now = new Date()
-    var time = now.getTime() 
-    val res = for {
+  private def pointRead(json: JValue)(implicit status: (BigInt, String)): List[Point] = {
+    val it = (for {
       JField("point", point) <- json
-      JField("id", JInt(i)) <- point 
-      JField("type", JString(t)) <- point 
-      JField("identifier", JString(iden)) <- point 
+      JField("id", JInt(i)) <- point
+      JField("type", JString(t)) <- point
+      JField("identifier", JString(iden)) <- point
       JField("data", JObject(data)) <- point
       JField("_url", JString(u)) <- point
-    } yield new Point(i.toLong, t, iden, compact(render(data)), u, time, time, time)
+      JField("createdAt", JInt(ca)) <- point
+      JField("updatedAt", JInt(ua)) <- point
+      JField("referencedAt", JInt(ra)) <- point
+    } yield new Point(i, t, iden, compact(render(data)), u, ca, ua, ra)).toList
 
-    res.toList
+    it.map { p =>
+      p.setStatus(status)
+      p
+    }
   }
 
-  private def statusRead(json: JValue): Iterable[(BigInt, String)] = for {
+  private def statusRead(json: JValue): List[(BigInt, String)] = (for {
     JObject(status) <- json \ "status"
     JField("code", JInt(c)) <- status 
     JField("message", JString(s)) <- status
-  } yield (c, s)
+  } yield (c, s)).toList
 
 }
 
