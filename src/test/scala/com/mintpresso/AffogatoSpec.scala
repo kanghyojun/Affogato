@@ -9,8 +9,8 @@ class AffogatoSpec extends Specification {
   val token = "3086671fe6f0-ca84-480b-9cec-0b84fd633ef6"
   val accountId = 3086
   val apiKey = "%s::%d".format(token, accountId)
-  val userIdentifier = "admire93"
-
+  val userIdentifier = "admire1"
+  val bugsIdentifier = "bugs-identifier1"
   val eitherPointMatcher = (r: Either[Respond, Point]) => r must beRight
   val resultPointMatcher = (r: AffogatoResult) => {
     r.result.asInstanceOf[Either[Respond, Point]] must beRight
@@ -29,16 +29,11 @@ class AffogatoSpec extends Specification {
     }
 
     "Add a point" in {
-
       val affogato = Affogato(apiKey)
         
       val res = affogato.set(
-        _type="tuser", 
-        identifier=userIdentifier, 
-        data="""{
-          "name": "khs",
-          "age": "22"
-        }""")
+        _type="foo", 
+        identifier=userIdentifier) 
 
       eitherPointMatcher(res)
     }
@@ -48,9 +43,7 @@ class AffogatoSpec extends Specification {
       val affogato = Affogato(apiKey)
 
       val res: AffogatoResult = affogato.set(LinkedHashMap[String, String](
-        "tuser" -> userIdentifier,
-        "name" -> "khs",
-        "age" -> "22"
+        "foo" -> userIdentifier
       ))
 
       resultPointMatcher(res)
@@ -59,9 +52,7 @@ class AffogatoSpec extends Specification {
     "Add a point with LinkedHashMap[Symbol, String]" in {
       val affogato = Affogato(apiKey)
       val res = affogato.set(LinkedHashMap[Symbol, String](
-        'tuser  -> userIdentifier,
-        'name -> "khs",
-        'age -> "22"
+        'foo  -> userIdentifier
       ))
       
       resultPointMatcher(res) 
@@ -72,12 +63,11 @@ class AffogatoSpec extends Specification {
 
       val res = affogato.set(Point(
         -1,
-        "tuser",
+        "foo",
         userIdentifier,
-        """{
-          "name": "khs",
-          "age": "22"
-        }""",
+        """
+          {}
+        """,
         "",
         0,
         0,
@@ -89,28 +79,40 @@ class AffogatoSpec extends Specification {
 
     "Get a Point" in {
       val affogato = Affogato(apiKey)
-      val res = affogato.get("tuser", userIdentifier)
+      val res = affogato.get("foo", userIdentifier)
       eitherPointMatcher(res)
     }
 
-
     "Get a point by id" in {
       val affogato = Affogato(apiKey)
-      eitherPointMatcher(affogato.get("tuser", userIdentifier))
+      eitherPointMatcher(affogato.get("foo", userIdentifier))
     }
-    
+
+    "Get a point by LinkedHashMap[String, String]" in {
+      val affogato = Affogato(apiKey)
+      resultPointMatcher(affogato.get(
+        LinkedHashMap[String, String]("foo" -> userIdentifier)
+      ))
+    }
+
+    "Get a point by LinkedHashMap[Symbol, String]" in {
+      val affogato = Affogato(apiKey)
+      resultPointMatcher(affogato.get(
+        LinkedHashMap[Symbol, String]('foo -> userIdentifier)
+      ))
+    }
+ 
     "Add a Edge" in {
       val affogato = Affogato(apiKey)
-
-      affogato.set("tuser", userIdentifier)
-      affogato.set("music", "bugs-1")
+      affogato.set("foo", userIdentifier)
+      affogato.set("barm", bugsIdentifier)
 
       affogato.set(
-        subjectType="tuser",
+        subjectType="foo",
         subjectIdentifier=userIdentifier,
         verb="listen",
-        objectType="music",
-        objectIdentifier="bugs-1"
+        objectType="barm",
+        objectIdentifier="bugs-identifier1"
       ) must beRight
     }
     
@@ -119,8 +121,8 @@ class AffogatoSpec extends Specification {
       var e: Either[Respond, Edge] = null
 
       for (
-        u <- affogato.set("tuser", userIdentifier).right;
-        m <- affogato.set("music", "bugs-1").right
+        u <- affogato.set("foo", userIdentifier).right;
+        m <- affogato.set("barm", bugsIdentifier).right
       ) {
         e = affogato.set(u, verb="listen", m)
       }
@@ -131,100 +133,87 @@ class AffogatoSpec extends Specification {
     "Add a Edge with LinkedHashMap[String, String]" in {
       val affogato = Affogato(apiKey)
 
-      resultEdgeMatcher(
-        affogato.set(LinkedHashMap[String, String](
-          "tuser" -> userIdentifier,
-          "do" -> "listen",
-          "music" -> "bugs-1"
-        ))
-      )
+      val a: AffogatoResult = affogato.set(LinkedHashMap[String, String](
+        "foo" -> userIdentifier,
+        "do" -> "listen",
+        "barm" -> bugsIdentifier
+      ))
+
+      resultEdgeMatcher(a)
     }
 
     "Add a Edge with LinkedHashMap[Symbol, String]" in {
       val affogato = Affogato(apiKey)
       resultEdgeMatcher(
         affogato.set(LinkedHashMap[Symbol, String](
-          'tuser -> userIdentifier,
+          'foo -> userIdentifier,
           'do -> "listen",
-          'music -> "bugs-1"
+          'barm -> bugsIdentifier
         ))
       )
     }
 
-    /*
-    
-
-    "Get a Edge" in {
+    "zGet a Edge" in {
       val affogato = Affogato(apiKey)
-
-      affogato.set("user", userIdentifier) must beSome
-      affogato.set("music", "bugs-1") must beSome
-
-      val res = affogato.set(
-        subjectType="user",
+      affogato.get(
+        subjectType="foo",
         subjectIdentifier=userIdentifier,
         verb="listen",
-        objectType="music",
-        objectIdentifier="bugs-1"
-      )
-      res === true
+        objectType="barm",
+        objectIdentifier=bugsIdentifier
+      ) must beRight
+    }
 
+    "zGet a Edge without inner point option" in {
+      val affogato = Affogato(apiKey)
+      affogato.get(
+        subjectType="foo",
+        subjectIdentifier=userIdentifier,
+        verb="listen",
+        objectType="barm",
+        objectIdentifier=bugsIdentifier,
+        getInnerPoints=false
+      ) must beRight
+    }
+
+    "zzGet a Edge by LinkedHashMap[String, String]" in {
+      val affogato = Affogato(apiKey)
       val getRes = affogato.get(
-        subjectType="user",
-        subjectIdentifier=userIdentifier,
-        verb="listen",
-        objectType="music",
-        objectIdentifier="bugs-1"
-      )
-      getRes must beSome
-      getRes.map { edges =>
-        edges.length must be_>(0)
-      }.getOrElse {
-        true === false
-      }
-      val getQueryRes = affogato.get(
-        subjectType="user",
-        subjectIdentifier=userIdentifier,
-        verb="listen",
-        objectType="music",
-        objectIdentifier="?"
+        LinkedHashMap[String, String](
+          "foo" -> userIdentifier,
+          "verb" -> "listen",
+          "barm" -> bugsIdentifier
+        )
       )
 
-      getQueryRes must beSome
-      getQueryRes.map { edges =>
-        edges.length must be_>(0)
-      }.getOrElse {
-        true === false
-      }
+      resultEdgeMatcher(getRes)
+    }
 
+    "zzGet a Edge by LinkedHashMap[Symbol, String]" in {
+      val affogato = Affogato(apiKey)
+      val getRes = affogato.get(
+        LinkedHashMap[Symbol, String](
+          'foo -> userIdentifier,
+          'verb -> "listen",
+          'barm -> bugsIdentifier
+        )
+      )
+
+      resultEdgeMatcher(getRes)
     }
     
-    "Get a Edge with ?" in {
+    "zzGet a Edge with ?" in {
       val affogato = Affogato(apiKey)
 
       val getRes = affogato.get(
-        subjectType="user",
+        subjectType="foo",
         subjectIdentifier="?",
         verb="listen",
-        objectType="music",
-        objectIdentifier="bugs-1"
+        objectType="barm",
+        objectIdentifier=bugsIdentifier
       )
-      getRes must beSome[List[Edge]].which { edges =>
-        edges.length must be_>(0)
-      }
-      val getQueryRes = affogato.get(
-        subjectType="user",
-        subjectIdentifier=userIdentifier,
-        verb="listen",
-        objectType="music",
-        objectIdentifier="?"
-      )
-
-      getQueryRes must beSome[List[Edge]].which { edges =>
-        edges.length must be_>(0)
-      }
+      getRes must beRight
     }
-
 
     "Throw exception when data json is invalid" in {
       val invalidJson = """
@@ -234,11 +223,10 @@ class AffogatoSpec extends Specification {
       """
       val affogato = Affogato(apiKey)
       affogato.set(
-        _type="user",
-        identifier="admire",
+        _type="foo",
+        identifier="bar",
         data=invalidJson
       ) must throwA[AffogatoInvalidJsonException]
     }
-  */
   }
 }
