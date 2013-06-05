@@ -61,22 +61,22 @@ case class Point(id: BigInt, _type: String,
  *
  */
 case class Edge(subject: Point, verb: String, _object: Point,
-                url: String, createdAt: BigInt) extends Respond
+                len: BigInt, url: String, createdAt: BigInt) extends Respond
 
-case class AffogatoResult(var result: Any) {
+case class AffogatoResult(var result: Either[Respond, _]) {
   def as[T] = result.asInstanceOf[Either[Respond, T]] match {
     case Right(d) => d
-    case Left(a) => throw new AffogatoConversionException(s"Conversion Failed :`( found: $a require: $result")
+    case Left(a) => throw new AffogatoConversionException(s"Conversion Failed :`( found: Left($a)")
   }
 
   def fold[R, T](err: Respond => R, success: T => R): R = {
     try {
       result.asInstanceOf[Either[Respond, T]] match {
         case Right(d) => success(d)
-        case Left(e) => err(e)
+        case Left(e: Respond) => err(e)
       }
     } catch {
-      case e: Exception => throw new Exception("Unexpected exception occured. AffogatoResult MUST be Either[Respond, T]")
+      case e: Exception => throw new Exception(s"Exception: $e, Unexpected exception occured. AffogatoResult MUST be Either[Respond, T]")
     } 
   }
 }
