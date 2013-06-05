@@ -185,7 +185,7 @@ class Affogato(val token: String, val accountId: Long) {
    * @return a AffogatoResult if request success, it will return ResultSet.result: Point
    *
    */
-  def set(_type: String, identifier: String, data: String = "{}"): Either[Respond, Point] = {
+  def set(_type: String, identifier: String, data: String="{}", updateIfExists: Boolean=true): Either[Respond, Point] = {
     val parsedData = parse(data)
     if(parsedData == JNothing) throw new AffogatoInvalidJsonException("A point data is invalid. data: String = %s".format(data))
 
@@ -199,6 +199,7 @@ class Affogato(val token: String, val accountId: Long) {
     val postPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
     implicit var req = url(postPointURI).POST
     req = req.addQueryParameter("api_token", token)
+    req = req.addQueryParameter("updateIfExists", updateIfExists.toString)
     req = req.addHeader("Content-Type", "application/json;charset=utf-8")
     req = req << additionalData
     req.setBodyEncoding("utf-8")
@@ -227,7 +228,7 @@ class Affogato(val token: String, val accountId: Long) {
    * @return AffogatoResult(Point(...))
    *
    */
-  def set[T](d: LinkedHashMap[T, String]): AffogatoResult = { 
+  def set[T](d: LinkedHashMap[T, String], updateIfExists: Boolean=true): AffogatoResult = { 
     val stringMap: LinkedHashMap[String, String] = d
 
     if((stringMap.keySet & verbSet).isEmpty) {
@@ -245,7 +246,9 @@ class Affogato(val token: String, val accountId: Long) {
           }
         }
       }
-      AffogatoResult(set(typeIdentifier._1, typeIdentifier._2, compact(render(data))))
+
+      val res: Either[Respond, Point] = set(typeIdentifier._1, typeIdentifier._2, compact(render(data)), updateIfExists)
+      AffogatoResult(res)
     } else {
       var sP: (String, String) = null
       var verb: String = null
@@ -260,7 +263,8 @@ class Affogato(val token: String, val accountId: Long) {
         }
       }
 
-      AffogatoResult(set(sP._1, sP._2, verb, oP._1, oP._2))
+      val res: Either[Respond, Edge] = set(sP._1, sP._2, verb, oP._1, oP._2)
+      AffogatoResult(res)
     }
   }
 
