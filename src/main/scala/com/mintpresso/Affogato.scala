@@ -319,6 +319,7 @@ class Affogato(val token: String, val accountId: Long) {
         Point(-1, subjectType, subjectIdentifier, "", "", 0, 0, 0),
         verb,
         Point(-1, objectType, objectIdentifier, "", "", 0, 0, 0),
+        -1,
         "",
         0
       ))
@@ -356,7 +357,7 @@ class Affogato(val token: String, val accountId: Long) {
     req.setBodyEncoding("utf-8")
 
     Request[Edge] { implicit status => json =>
-      Right(Edge(subject, verb, _object, "", 0))
+      Right(Edge(subject, verb, _object, -1, "", 0))
     }
   }
   /** Get a point by id
@@ -522,8 +523,47 @@ class Affogato(val token: String, val accountId: Long) {
     JObject(status) <- json \ "status"
     JField("code", JInt(c)) <- status 
     JField("message", JString(s)) <- status
-  } yield (c, s)).toList
+  } yield (c, s)).toList 
 
+  private def edgeInnerPointRead(json: JValue) = {
+    val edges = json \ "edges"
+    val len = (json \ "_length" \\ classOf[JInt]).head.asInstanceOf[BigInt]
+    implicit val formats = Serialization.formats(NoTypeHints)
+
+    edges.values.asInstanceOf[List[Map[String, Any]]].map { edge =>
+      var subject = edge("subject").asInstanceOf[Map[String, Any]]
+      var _object = edge("object").asInstanceOf[Map[String, Any]]
+      var verb = edge("verb").asInstanceOf[String]
+      var url = edge("_url").asInstanceOf[String]
+      var createdAt = edge("createdAt").asInstanceOf[BigInt]
+      Edge(
+        Point(
+          subject("id").asInstanceOf[BigInt],
+          subject("type").asInstanceOf[String],
+          subject("identifier").asInstanceOf[String],
+          write(subject("data").asInstanceOf[Map[String, String]]),
+          subject("_url").asInstanceOf[String],
+          subject("createdAt").asInstanceOf[BigInt],
+          subject("updatedAt").asInstanceOf[BigInt],
+          subject("referencedAt").asInstanceOf[BigInt]
+        ),
+        verb,
+        Point(
+          _object("id").asInstanceOf[BigInt],
+          _object("type").asInstanceOf[String],
+          _object("identifier").asInstanceOf[String],
+          write(_object("data").asInstanceOf[Map[String, String]]),
+          _object("_url").asInstanceOf[String],
+          _object("createdAt").asInstanceOf[BigInt],
+          _object("updatedAt").asInstanceOf[BigInt],
+          _object("referencedAt").asInstanceOf[BigInt]
+        ),
+        len,
+        url,
+        createdAt
+      )
+    }
+  }  
 }
 
 
