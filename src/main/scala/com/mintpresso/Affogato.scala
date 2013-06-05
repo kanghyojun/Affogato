@@ -21,6 +21,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.config._
 import dispatch._
 import net.liftweb.json._
+import net.liftweb.json.Serialization.write
 import net.liftweb.json.JsonDSL._
 
 
