@@ -479,6 +479,7 @@ class Affogato(val token: String, val accountId: Long) {
                   url,
                   createdAt
                 )
+        r.map(_.setStatus(status))
         Right(r)
       }
     }
@@ -610,7 +611,7 @@ class Affogato(val token: String, val accountId: Long) {
     JField("message", JString(s)) <- status
   } yield (c, s)).toList 
 
-  private def edgeInnerPointRead(json: JValue) = {
+  private def edgeInnerPointRead(json: JValue)(implicit status: (BigInt, String)) = {
     val edges = json \ "edges"
     val len = (json \ "_length" \\ classOf[JInt]).head.asInstanceOf[BigInt]
     implicit val formats = Serialization.formats(NoTypeHints)
@@ -621,7 +622,7 @@ class Affogato(val token: String, val accountId: Long) {
       var verb = edge("verb").asInstanceOf[String]
       var url = edge("_url").asInstanceOf[String]
       var createdAt = edge("createdAt").asInstanceOf[BigInt]
-      Edge(
+      val e = Edge(
         Point(
           subject("id").asInstanceOf[BigInt],
           subject("type").asInstanceOf[String],
@@ -647,6 +648,8 @@ class Affogato(val token: String, val accountId: Long) {
         url,
         createdAt
       )
+      e.setStatus(status)
+      e
     }
   }  
 }
