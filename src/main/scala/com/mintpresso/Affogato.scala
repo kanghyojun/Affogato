@@ -161,8 +161,12 @@ class Affogato(val token: String, val accountId: Long) {
           Left(new Respond(status._1, status._2))
         }
       }
-      case Left(err: StatusCode) => Left(new Respond(err.code, err.getMessage))
-      case Left(e) => Left(new Respond(500, e.getMessage))
+      case Left(err: StatusCode) => {
+        Left(new Respond(err.code, s"$err.getMessage in `$req.build().getRawUrl`"))
+      }
+      case Left(e) => {
+        Left(new Respond(500, e.getMessage))
+      }
     }
   }
   
