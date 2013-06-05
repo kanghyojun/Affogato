@@ -27,7 +27,22 @@ import net.liftweb.json.JsonDSL._
 
 import scala.reflect.runtime.universe.{TypeTag, Type, TypeRef, typeOf}
 
+/** Base class of mintpresso response. Point, Edge MUST extend this class.
+ *
+ * @param code a status code from mintpresso response 200 or 201 or 400 and etc.
+ * @param message a status message from mintpresso response
+ */
 class Respond(var code: BigInt = 0, var message: String = "") {
+  /** Set status via functions
+   *
+   * {{{
+   * scala> val r = new Respond()
+   * Respond = Respond
+   * 
+   * scala> r.setStatus((200, "complete")) 
+   * }}}
+   *
+   */
   def setStatus(s: (BigInt, String)) = {
     code = s._1
     message = s._2
@@ -57,19 +72,59 @@ case class Point(id: BigInt, _type: String,
  * @param verb describe about relation between subject point
  *             and object point. (eg. person `listen` music)
  * @param _object a object point.
+ * @param len length of edge
  * @param url a edge url
- * @param url created time, unix timestamp
+ * @param createdAt created time, unix timestamp
  *
  */
 case class Edge(subject: Point, verb: String, _object: Point,
                 len: BigInt, url: String, createdAt: BigInt) extends Respond
 
+/** Result class that can contain Eitner[Respond, Any].
+ *
+ * {{{
+ * scala> val a = AffogatoResult(Right(Point(...)))
+ * a: AffogatoResult = AffogatoResult(Right(Point(...)))
+ *
+ * scala> a.as[Point]
+ * Point = Point(...)
+ *
+ * scala> a.fold(e => println(e), (s: Point) => println(s))
+ * Point(...)
+ *
+ * }}}
+ */
 case class AffogatoResult(var result: Either[Respond, _]) {
+  /** Return result as a instance of type T. if result is not Right(d: T), then it will throw [[com.mintpresso.AffogatoConversionException]].
+   *  and it can throw [[java.lang.ClassCastException]] when type T is inappropriate for result.
+   *
+   * {{{
+   * scala> a.as[Point]
+   * Point = Point(...)
+   *
+   * scala> a.as[Boolean]
+   * java.lang.ClassCastException: Either[Respond, Point] cannot be cast to java.lang.Boolean
+   *
+   * }}}
+   */
   def as[T] = result.asInstanceOf[Either[Respond, T]] match {
     case Right(d) => d
     case Left(a) => throw new AffogatoConversionException(s"Conversion Failed :`( found: Left($a)")
   }
 
+  /** Handling Error or Success of AffogatoResult. (Respond => R) will call when request fail.
+   *
+   * {{{
+   * scala> a.fold(e => println(e), (s: Point) => println(s))
+   * Point(...)
+   *
+   * scala> val b = AffogatoResult(Left(new Respond(500, "some problem occured")))
+   * b: AffogatoResult = AffogatoResult(Left(Respond(...)))
+   *
+   * scala> b.fold(e => println(e.code, e.message), (s: Point) => println(s))
+   * (500, some problem occured)
+   * }}}
+   */
   def fold[R, T](err: Respond => R, success: T => R): R = {
     try {
       result.asInstanceOf[Either[Respond, T]] match {
@@ -137,10 +192,10 @@ class Affogato(val token: String, val accountId: Long) {
   )
   val verbSet: Set[String] = Set("verb", "do", "did", "does")
 
-  /** Convert Map[T, String] to Map[String, String] for syntax sugar
+  /** Convert LinkedHashMap[T, String] to Map[String, String] for syntax sugar
    *
-   * @param x Map[T, String] to be replaced Map[String, String]. T should be String or Symbol
-   * @return a Map[String, String]
+   * @param x LinkedHashMap[T, String] to be replaced LinkedHashMap[String, String]. T should be one of [String, Symbol]
+   * @return a LinkedHashMap[String, String]
    *
    */
   implicit def tToStringMap[T](m: LinkedHashMap[T, String]): LinkedHashMap[String, String] = m.map { a =>
@@ -151,6 +206,10 @@ class Affogato(val token: String, val accountId: Long) {
     }
   }  
 
+  /** Request a http request to given url. it will handling http status and mintpresso response status.
+   *  type T should be a type of data returned.
+   *  
+   */
   private def Request[T](f: ((BigInt, String)) => JValue => Either[Respond, T])(implicit req: com.ning.http.client.RequestBuilder): Either[Respond, T] = {
     Http(req OK as.String).either() match {
       case Right(r: String) => {
@@ -174,15 +233,16 @@ class Affogato(val token: String, val accountId: Long) {
   /** Add a point to mintpresso
    *
    * {{{
-   * scala> affogato.set("user", "admire9@gmail.com"r
-   * Either[Respond, Point] = Right(Point(...))
+   * scala> val c = affogato.set("user", "admire9@gmail.com")
+   * c: Either[Respond, Point] = Right(Point(...))
    *
    * }}} 
    *
    * @param _type type of point
    * @param identifier identifier of point
    * @param data additional data of point
-   * @return a AffogatoResult if request success, it will return ResultSet.result: Point
+   * @param updateIfExists updateIfExists flag. FYI, reference mintpresso document.
+   * @return a Either[Respond, Point]
    *
    */
   def set(_type: String, identifier: String, data: String="{}", updateIfExists: Boolean=true): Either[Respond, Point] = {
@@ -219,13 +279,13 @@ class Affogato(val token: String, val accountId: Long) {
    * scala> affogato.set(LinkedHashMap[String, String]("user" -> "admire9@gmail.com", "name" -> "kanghyojun"))
    * AffogatoResult = AffogatoResult(Point(...))
    *
-   * scala> affogato.set(Map[Symbol, String]('user -> "admire93@gmail.com", 'name -> "kanghyojun"))
-   * AffogatoResult = AffogatoResult(Point(...))
+   * scala> affogato.set(Map[Symbol, String]('user -> "admire93@gmail.com", 'verb -> "like", 'post -> "some-post"))
+   * AffogatoResult = AffogatoResult(Edge(...))
    *
    * }}} 
    *
-   * @param d LinkedHashMap 
-   * @return AffogatoResult(Point(...))
+   * @param d LinkedHashMap contain information of mintpresso data.
+   * @return AffogatoResult(Point(...)) or AffogatoResult(Edge(...))
    *
    */
   def set[T](d: LinkedHashMap[T, String], updateIfExists: Boolean=true): AffogatoResult = { 
@@ -268,16 +328,16 @@ class Affogato(val token: String, val accountId: Long) {
     }
   }
 
-  /** Add a point to mintpresso
+  /** Add a point to mintpresso by [[com.mintpresso.Point]]
    *
    * {{{
    * scala> affogato.set(Point( ... ))
-   * Option[Point] = Some(Point(...))
+   * Either[Respond, Point] = Right(Point(...))
    *
    * }}} 
    *
    * @param point [[com.mintpresso.Point]] instance 
-   * @return 
+   * @return Either[Respond, Point]
    *
    */
   def set(point: Point): Either[Respond, Point] = { 
@@ -289,7 +349,7 @@ class Affogato(val token: String, val accountId: Long) {
    *
    * {{{
    * scala> affogato.set("user", "admire9@gmail.com", "listen", "music", "bugs-123")
-   * Option[Edge] = Some(Edge(...))
+   * Either[Respond, Edge] = Right(Edge(...))
    *
    * }}} 
    *
@@ -299,7 +359,7 @@ class Affogato(val token: String, val accountId: Long) {
    *        and object point. (eg. person `listen` music)
    * @param objectType type of object point
    * @param objectIdentifier identifier of object point
-   * @return a value whether request is successfully ended or not
+   * @return Either[Respond, Edge]
    *
    */
   def set(subjectType: String, subjectIdentifier: String, verb: String,
@@ -331,18 +391,18 @@ class Affogato(val token: String, val accountId: Long) {
     }
   }
   
-  /** Add a Edge to mintpresso
+  /** Add a Edge to mintpresso by [[com.mintpresso.Point]]
    *
    * {{{
    * scala> affogato.set(Point(...), "like", Point(...))
-   * ResultSet = ResultSet(Edge(...))
+   * Either[Respond, Edge] = Right(Edge(...))
    *
    * }}} 
    *
-   * @param subject Point
-   * @param verb describe about relation between subject point 
-   * @param _object Point
-   * @return ResultSet(Edge(...))
+   * @param subject [[com.mintpresso.Point]] that contains data about subject of realation
+   * @param verb describe about relation between subject point and object point
+   * @param _object [[com.mintpresso.Point]] that contains data about object of realation
+   * @return Either[Respond, Edge]]
    *
    */
   def set(subject: Point, verb: String, _object: Point): Either[Respond, Edge] = {
@@ -368,7 +428,7 @@ class Affogato(val token: String, val accountId: Long) {
   /** Get a point by id
    *
    * @param id id of point
-   * @return a ResultSet if point is exist, ResultSet(Option[Point]) will return.
+   * @return Either[Respond, Point]
    *
    */
   def get(id: Long): Either[Respond, Point] = {
@@ -385,7 +445,7 @@ class Affogato(val token: String, val accountId: Long) {
    *
    * @param _type type of point
    * @param identifier identifier of point
-   * @return a Option[point] if point is exist, Some(Point) will return.
+   * @return Either[Respond, Edge]
    *
    */
   def get(_type: String, identifier: String): Either[Respond, Point] = {
@@ -410,7 +470,8 @@ class Affogato(val token: String, val accountId: Long) {
    * @param objectId id of object point
    * @param objectType type of object point
    * @param objectIdentifier identifier of object point
-   * @return a value whether request is successfully ended or not
+   * @param getInnerPoints getInnerPoints flag. if flag is true, edge data filled with real Point data.
+   * @return Either[Respond, List[Edge]]
    *
    */
   def get(subjectId: Option[Long] = None, subjectType: String, 
@@ -486,6 +547,9 @@ class Affogato(val token: String, val accountId: Long) {
   }
 
   /** Get a point or Edge by LinkedHashMap[String, String] or LinkedHashMap[Symbol, String]
+   *
+   * @param d LinkedHashMap[T, String] data about Point or Edge. 
+   * @param getInnerPoints getInnerPoints flag.
    *
    * {{{
    * scala> affogato.get(LinkedHashMap[String, String](
