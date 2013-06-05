@@ -416,9 +416,9 @@ class Affogato(val token: String, val accountId: Long) {
   def get(subjectId: Option[Long] = None, subjectType: String, 
           subjectIdentifier: String, verb: String,
           objectId: Option[Long] = None, objectType: String,
-          objectIdentifier: String): Option[List[Edge]] = {
+          objectIdentifier: String, getInnerPoints: Boolean = true): Either[Respond, List[Edge]] = {
     val getEdgeURI = uri(affogatoConf("mintpresso.url.edge").format(accountId))
-    val req = url(getEdgeURI)
+    implicit val req = url(getEdgeURI)
     req.addQueryParameter("api_token", token)
     if(subjectIdentifier != "?") req.addQueryParameter("subjectIdentifier",
                                                        subjectIdentifier)
@@ -429,6 +429,7 @@ class Affogato(val token: String, val accountId: Long) {
     req.addQueryParameter("subjectType", subjectType)
     req.addQueryParameter("objectType", objectType)
     req.addQueryParameter("verb", verb)
+    req.addQueryParameter("getInnerPoints", getInnerPoints.toString)
 
     subjectId.map { sId =>
       req.addQueryParameter("subjectId", sId.toString) 
@@ -437,49 +438,128 @@ class Affogato(val token: String, val accountId: Long) {
     objectId.map { oId =>
       req.addQueryParameter("objectId", oId.toString) 
     }
-
-    Http(req OK as.String).option().map { res =>
-      def pointURI(i: Long): String = uri(affogatoConf("mintpresso.url.point.find.id").format(accountId, i))
-      val json = parse(res)
-      val r: List[Edge] = for {
-        JObject(edges) <- json \\ "edges"
-        JField("subjectId", JInt(subjectId)) <- edges
-        JField("subjectType", JString(subjectType)) <- edges
-        JField("verb", JString(verb)) <- edges
-        JField("objectId", JInt(objectId)) <- edges
-        JField("objectType", JString(objectType)) <- edges
-        JField("_url", JString(url)) <- edges
-        JField("createdAt", JInt(createdAt)) <- edges
-      } yield Edge(
-                Point(
-                  subjectId.toLong,
-                  subjectType,
-                  subjectIdentifier,
-                  "",
-                  pointURI(subjectId.toLong),
-                  0,
-                  0,
-                  0
-                ),
-                verb, 
-                Point(
-                  objectId.toLong,
-                  objectType,
-                  objectIdentifier,
-                  "",
-                  pointURI(objectId.toLong),
-                  0,
-                  0,
-                  0
-                ),
-                url,
-                createdAt
-              )
-      Some(r)
-    }.getOrElse {
-      None
+    Request[List[Edge]] { implicit status => json =>
+      if(getInnerPoints) {
+        Right(edgeInnerPointRead(json))
+      } else {
+        def pointURI(i: Long): String = uri(affogatoConf("mintpresso.url.point.find.id").format(accountId, i))
+        val r: List[Edge] = for {
+          JObject(edges) <- json \\ "edges"
+          JField("subjectId", JInt(subjectId)) <- edges
+          JField("subjectType", JString(subjectType)) <- edges
+          JField("verb", JString(verb)) <- edges
+          JField("objectId", JInt(objectId)) <- edges
+          JField("objectType", JString(objectType)) <- edges
+          JField("_url", JString(url)) <- edges
+          JField("createdAt", JInt(createdAt)) <- edges
+          JField("_length", JInt(len)) <- edges
+        } yield Edge(
+                  Point(
+                    subjectId.toLong,
+                    subjectType,
+                    subjectIdentifier,
+                    "",
+                    pointURI(subjectId.toLong),
+                    0,
+                    0,
+                    0
+                  ),
+                  verb, 
+                  Point(
+                    objectId.toLong,
+                    objectType,
+                    objectIdentifier,
+                    "",
+                    pointURI(objectId.toLong),
+                    0,
+                    0,
+                    0
+                  ),
+                  len,
+                  url,
+                  createdAt
+                )
+        Right(r)
+      }
     }
   }
+
+  /** Get a point or Edge by LinkedHashMap[String, String] or LinkedHashMap[Symbol, String]
+   *
+   * {{{
+   * scala> affogato.get(LinkedHashMap[String, String](
+   *          "user" -> "admire93"
+   *        ))
+   * AffogatoResult[Either[Respond, Point]] = AffogatoResult[Either[Respond, Point]](Right[Point(...))
+   *
+   * scala> affogato.get(LinkedHashMap[Symbol, String](
+   *          'user -> "admire93",
+   *          'verb -> "listen",
+   *          'music -> "bugs-1"
+   *        ))
+   * AffogatoResult[Either[Respond, Edge]] = AffogatoResult[Either[Respond, Edge]](Right[Point(...))
+   *
+   * }}}
+   *
+   */
+  def get[T](d: LinkedHashMap[T, String], getInnerPoints: Boolean=true): AffogatoResult = { 
+    val stringMap: LinkedHashMap[String, String] = d
+
+    if((stringMap.keySet & verbSet).isEmpty) {
+      var typeIdentifier: (String, String) = null
+      var data: JObject = null
+      for((pair, index) <- stringMap.zipWithIndex) {
+        index match {
+          case 0 =>  typeIdentifier = pair
+          case _ => {
+            if(data == null) {
+              data = pair
+            } else {
+              data = data ~ pair
+            }
+          }
+        }
+      }
+      AffogatoResult(get(typeIdentifier._1, typeIdentifier._2))
+    } else {
+      var sP: (String, String) = null
+      var verb: String = null
+      var oP: (String, String) = null
+      var sId: (String, String) = null
+      var oId: (String, String) = null
+
+      var res: Either[Respond, List[Edge]] = null
+
+      for((pair, index) <- stringMap.zipWithIndex) {
+        index match {
+          case 0 => {
+            if(pair._1 == "subjectId") {
+              sId = pair
+            } else {
+              sP = pair
+            }
+          }
+          case 1 => verb = pair._2
+          case 2 => {
+            if(pair._1 == "objectId") {
+              oId = pair
+            } else {
+              oP = pair
+            }
+          }
+          case _ => throw new Exception("Unused data contained in data -"+pair)
+        }
+      }
+      if(sP == null) {
+        res = get(Some(sId._2.toLong), "", "", verb, Some(oId._2.toLong), "", "", getInnerPoints)
+      } else {
+        res = get(None, sP._1, sP._2, verb, None, oP._1, oP._2, getInnerPoints)
+      }
+
+      AffogatoResult(res)
+    }
+  }
+
 
   /** Generate a uri for mintpresso api
    *

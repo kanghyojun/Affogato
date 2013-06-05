@@ -12,16 +12,15 @@ class AffogatoSpec extends Specification {
   val userIdentifier = "admire93"
 
   val eitherPointMatcher = (r: Either[Respond, Point]) => r must beRight
-  val resultPointMatcher = (r: AffogatoResult) => r.fold(
-    e => false === true,
-    (p: Point) => p.identifier === userIdentifier
-  )
-  val resultEdgeMatcher = (r: AffogatoResult) => r.fold(
-    e => false === true,
-    (e: Edge) => true === true 
-  )
+  val resultPointMatcher = (r: AffogatoResult) => {
+    r.result.asInstanceOf[Either[Respond, Point]] must beRight
+  }
+  val resultEdgeMatcher = (r: AffogatoResult) => {
+    r.result.asInstanceOf[Either[Respond, Edge]] must beRight
+  }
 
   "Mintpresso API Pack" should {
+    sequential
     
     "Can init accountId" in {
       val affogato = Affogato(apiKey)
