@@ -222,7 +222,9 @@ class Affogato(val token: String, val accountId: Long) {
         }
       }
       case Left(err: StatusCode) => {
-        Left(new Respond(err.code, s"$err.getMessage in `$req.build().getRawUrl`"))
+        val rawURL = req.build().getRawUrl
+        val msg = err.getMessage
+        Left(new Respond(err.code, s"$msg in `$rawURL`"))
       }
       case Left(e) => {
         Left(new Respond(500, e.getMessage))
@@ -638,7 +640,6 @@ class Affogato(val token: String, val accountId: Long) {
    *
    */ 
   def uri(path: String) = {
-
     "%1$s://%2$s:%3$s/%4$s%5$s".format(
       affogatoConf("mintpresso.protocol"),
       affogatoConf("mintpresso.host"),
