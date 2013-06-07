@@ -676,46 +676,53 @@ class Affogato(val token: String, val accountId: Long) {
     JField("message", JString(s)) <- status
   } yield (c, s)).toList 
 
-  private def edgeInnerPointRead(json: JValue)(implicit status: (BigInt, String)) = {
+  private def edgeInnerPointRead(json: JValue)(implicit status: (BigInt, String)): List[Edge] = {
     val edges = json \ "edges"
     val len = (json \ "_length" \\ classOf[JInt]).head.asInstanceOf[BigInt]
     implicit val formats = Serialization.formats(NoTypeHints)
+    var res: List[Edge] = List[Edge]()
 
     edges.values.asInstanceOf[List[Map[String, Any]]].map { edge =>
-      var subject = edge("subject").asInstanceOf[Map[String, Any]]
-      var _object = edge("object").asInstanceOf[Map[String, Any]]
-      var verb = edge("verb").asInstanceOf[String]
-      var url = edge("_url").asInstanceOf[String]
-      var createdAt = edge("createdAt").asInstanceOf[BigInt]
-      val e = Edge(
-        Point(
-          subject("id").asInstanceOf[BigInt],
-          subject("type").asInstanceOf[String],
-          subject("identifier").asInstanceOf[String],
-          write(subject("data").asInstanceOf[Map[String, String]]),
-          subject("_url").asInstanceOf[String],
-          subject("createdAt").asInstanceOf[BigInt],
-          subject("updatedAt").asInstanceOf[BigInt],
-          subject("referencedAt").asInstanceOf[BigInt]
-        ),
-        verb,
-        Point(
-          _object("id").asInstanceOf[BigInt],
-          _object("type").asInstanceOf[String],
-          _object("identifier").asInstanceOf[String],
-          write(_object("data").asInstanceOf[Map[String, String]]),
-          _object("_url").asInstanceOf[String],
-          _object("createdAt").asInstanceOf[BigInt],
-          _object("updatedAt").asInstanceOf[BigInt],
-          _object("referencedAt").asInstanceOf[BigInt]
-        ),
-        len,
-        url,
-        createdAt
-      )
-      e.setStatus(status)
-      e
+      edge.get("subject").map { s =>
+        edge.get("object").map { o =>
+          val subject = s.asInstanceOf[Map[String, Any]] 
+          val _object = o.asInstanceOf[Map[String, Any]]
+          var verb = edge("verb").asInstanceOf[String]
+          var url = edge("_url").asInstanceOf[String]
+          var createdAt = edge("createdAt").asInstanceOf[BigInt]
+          val e: Edge = Edge(
+            Point(
+              subject("id").asInstanceOf[BigInt],
+              subject("type").asInstanceOf[String],
+              subject("identifier").asInstanceOf[String],
+              write(subject("data").asInstanceOf[Map[String, String]]),
+              subject("_url").asInstanceOf[String],
+              subject("createdAt").asInstanceOf[BigInt],
+              subject("updatedAt").asInstanceOf[BigInt],
+              subject("referencedAt").asInstanceOf[BigInt]
+            ),
+            verb,
+            Point(
+              _object("id").asInstanceOf[BigInt],
+              _object("type").asInstanceOf[String],
+              _object("identifier").asInstanceOf[String],
+              write(_object("data").asInstanceOf[Map[String, String]]),
+              _object("_url").asInstanceOf[String],
+              _object("createdAt").asInstanceOf[BigInt],
+              _object("updatedAt").asInstanceOf[BigInt],
+              _object("referencedAt").asInstanceOf[BigInt]
+            ),
+            len,
+            url,
+            createdAt
+          )
+          e.setStatus(status)
+          res = e :: res
+        }
+      }
     }
+
+    return res
   }  
 }
 
