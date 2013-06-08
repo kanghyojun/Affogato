@@ -515,7 +515,6 @@ class Affogato(val token: String, val accountId: Long) {
           JField("objectType", JString(objectType)) <- edges
           JField("_url", JString(url)) <- edges
           JField("createdAt", JInt(createdAt)) <- edges
-          JField("_length", JInt(len)) <- edges
         } yield Edge(
                   Point(
                     subjectId.toLong,
@@ -538,7 +537,7 @@ class Affogato(val token: String, val accountId: Long) {
                     0,
                     0
                   ),
-                  len,
+                  -1,
                   url,
                   createdAt
                 )
