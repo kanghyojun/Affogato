@@ -66,6 +66,9 @@ case class Point(id: BigInt, _type: String,
                  createdAt: BigInt, updatedAt: BigInt, 
                  referencedAt: BigInt) extends Respond
 
+case class Points(points: List[Point], len: BigInt, previous: String,
+                  current: String, next: String)
+
 /** Represent a mintpresso edge. edge define realation between a points.
  *
  * @param subject a subject point.
@@ -456,10 +459,45 @@ class Affogato(val token: String, val accountId: Long) {
     req.addQueryParameter("api_token", token)
     req.addQueryParameter("type", _type)
     req.addQueryParameter("identifier", identifier)
-    req.addHeader("Accepts", "application/json;charset=utf-8")    
+    req.addHeader("Accepts", "application/json;charset=utf-8")
 
     Request[Point] { implicit status => json =>
       Right(pointRead(json).head)
+    }
+  }
+
+  /** Get a point by type or identifier
+   *
+   * @param _type type of point
+   * @param identifier identifier of point
+   * @return Either[Respond, Points]
+   *
+   */
+  def getByTypeOrIdentifier(
+    _type: String, identifier: String,
+    limit: Long = 100, offset: Long = 0
+  ): Either[Respond, Points] = {
+    val getPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
+    implicit var req = url(getPointURI)
+    req.addQueryParameter("api_token", token)
+    if(_type != "?") {
+      req.addQueryParameter("type", _type)
+    }
+    if(identifier != "?") {
+      req.addQueryParameter("identifier", identifier)
+    }
+    req.addQueryParameter("limit", limit.toString)
+    req.addQueryParameter("offset", offset.toString)
+    req.addHeader("Accepts", "application/json;charset=utf-8")    
+
+    Request[Points] { implicit status => json =>
+      Right(Points(
+        List[Point](),
+        0,
+        "",
+        "",
+        ""
+      ))
     }
   }
 
