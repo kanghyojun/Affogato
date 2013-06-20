@@ -450,7 +450,7 @@ class Affogato(val token: String, val accountId: Long) {
    *
    * @param _type type of point
    * @param identifier identifier of point
-   * @return Either[Respond, Edge]
+   * @return Either[Respond, Point]
    *
    */
   def get(_type: String, identifier: String): Either[Respond, Point] = {
