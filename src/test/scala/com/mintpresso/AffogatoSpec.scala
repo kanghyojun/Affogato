@@ -20,10 +20,6 @@ class AffogatoSpec extends Specification {
     r.result.asInstanceOf[Either[Respond, Edge]] must beRight
   }
   val resultListEdgeMatcher = (r: AffogatoResult) => {
-    r.result.asInstanceOf[Either[Respond, Edges]] match {
-      case Left(a) => println(a.message)
-      case Right(_) => println("")
-    }
     r.result.asInstanceOf[Either[Respond, Edges]] must beRight
   }
 
@@ -131,13 +127,8 @@ class AffogatoSpec extends Specification {
       affogato.set("foo", userIdentifier)
       affogato.set("barm", bugsIdentifier)
 
-      affogato.set(
-        subjectType="foo",
-        subjectIdentifier=userIdentifier,
-        verb="listen",
-        objectType="barm",
-        objectIdentifier=bugsIdentifier
-      ) must beRight
+      affogato.set(-1, "foo", userIdentifier, "listen",
+                   -1, "barm", bugsIdentifier, "{}") must beRight
     }
     
     "be added by class" in {
@@ -148,7 +139,7 @@ class AffogatoSpec extends Specification {
         u <- affogato.set("foo", userIdentifier).right;
         m <- affogato.set("barm", bugsIdentifier).right
       ) {
-        e = affogato.set(u, verb="listen", m)
+        e = affogato.set(u, verb="listen", m, "")
       }
 
       if(e == null) {
@@ -245,14 +236,6 @@ class AffogatoSpec extends Specification {
     
     "be found with limit, offset options" in {
       val affogato = Affogato(apiKey)
-
-      affogato.set(
-        subjectType="foo",
-        subjectIdentifier=userIdentifier,
-        verb="listen",
-        objectType="barm",
-        objectIdentifier=bugsIdentifier
-      ) must beRight
 
       val e = affogato.get(None, "foo", userIdentifier,
                            "listen", None, "barm", "bugs-identifier1",

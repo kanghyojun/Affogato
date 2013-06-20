@@ -80,7 +80,7 @@ case class Points(points: List[Point], len: BigInt, previous: String,
  * @param createdAt created time, unix timestamp
  *
  */
-case class Edge(subject: Point, verb: String, _object: Point, 
+case class Edge(subject: Point, verb: String, _object: Point, data: String,
                 url: String, createdAt: BigInt) extends Respond
 
 case class Edges(edges: List[Edge], len: BigInt,
@@ -305,10 +305,10 @@ class Affogato(val token: String, val accountId: Long) {
    */
   def set[T](d: LinkedHashMap[T, String], updateIfExists: Boolean=true): AffogatoResult = { 
     val stringMap: LinkedHashMap[String, String] = d
+    var data: JObject = null
 
     if((stringMap.keySet & verbSet).isEmpty) {
       var typeIdentifier: (String, String) = null
-      var data: JObject = null
       for( (pair, index) <- stringMap.zipWithIndex ) {
         index match {
           case 0 =>  typeIdentifier = pair
@@ -322,7 +322,10 @@ class Affogato(val token: String, val accountId: Long) {
         }
       }
 
-      val res: Either[Respond, Point] = set(typeIdentifier._1, typeIdentifier._2, compact(render(data)), updateIfExists)
+      val res: Either[Respond, Point] = set(
+        typeIdentifier._1, typeIdentifier._2,
+        compact(render(data)), updateIfExists
+      )
       AffogatoResult(res)
     } else {
       var sP: (String, String) = null
@@ -334,11 +337,19 @@ class Affogato(val token: String, val accountId: Long) {
           case 0 => sP = pair
           case 1 => verb = pair._2
           case 2 => oP = pair
-          case _ => throw new Exception("Unused data contained in data -"+pair)
+          case _ => {
+            if(data == null) {
+              data = pair
+            } else {
+              data = data ~ pair
+            }
+          }
         }
       }
 
-      val res: Either[Respond, Edge] = set(sP._1, sP._2, verb, oP._1, oP._2)
+      val res: Either[Respond, Edge] = set(-1, sP._1, sP._2, verb,
+                                           -1, oP._1, oP._2,
+                                           compact(render(data)))
       AffogatoResult(res)
     }
   }
@@ -377,21 +388,44 @@ class Affogato(val token: String, val accountId: Long) {
    * @return Either[Respond, Edge]
    *
    */
-  def set(subjectType: String, subjectIdentifier: String, verb: String,
-          objectType: String, objectIdentifier: String): Either[Respond, Edge] = {
-    val edge = 
-      ("edge" -> 
-        ("subjectId" -> subjectIdentifier) ~
-        ("subjectType" -> subjectType) ~
-        ("objectId" -> objectIdentifier) ~
-        ("objectType" -> objectType) ~
-        ("verb" -> verb))
+  def set(subjectId: Long, subjectType: String,
+          subjectIdentifier: String,
+          verb: String, objectId: Long, objectType: String,
+          objectIdentifier: String,
+          data: String): Either[Respond, Edge] = {
+    var parsedData = parse("{}")
+    if(data != "null" && data.length != 0) {
+      parsedData = parse(data)
+    }
+    var edge: (String, net.liftweb.json.JsonAST.JObject) = null
+    if(subjectId != -1 && objectId != -1) {
+      edge = 
+        ("edge" -> 
+          ("subjectId" -> subjectId) ~
+          ("subjectType" -> subjectType) ~
+          ("objectId" -> objectId) ~
+          ("objectType" -> objectType) ~
+          ("verb" -> verb) ~
+          ("data" -> parsedData))
 
+    } else if(subjectIdentifier.length != 0 && objectIdentifier !=0) {
+      edge = 
+        ("edge" -> 
+          ("subjectIdentifier" -> subjectIdentifier) ~
+          ("subjectType" -> subjectType) ~
+          ("objectIdentifier" -> objectIdentifier) ~
+          ("objectType" -> objectType) ~
+          ("verb" -> verb) ~
+          ("data" -> parsedData))
+    } else {
+      throw new AffogatoInvalidParamException("one of [`subjectId`, `objectId`] or [`subjectIdentifier`, `objectIdentifier`] MUST be given")
+    }
+   
     val addEdgeURI = uri(affogatoConf("mintpresso.url.edge").format(accountId))
     implicit var req = url(addEdgeURI).POST
     req << compact(render(edge))
     req.addQueryParameter("api_token", token)     
-    req.addHeader("Content-Type", "application/json;charset=utf-8")    
+    req.addHeader("Content-Type", "application/json;charset=utf-8")
     req.setBodyEncoding("utf-8")
 
     Request[Edge] { implicit status => json =>
@@ -399,6 +433,7 @@ class Affogato(val token: String, val accountId: Long) {
         Point(-1, subjectType, subjectIdentifier, "", "", 0, 0, 0),
         verb,
         Point(-1, objectType, objectIdentifier, "", "", 0, 0, 0),
+        "",
         "",
         0
       ))
@@ -419,25 +454,10 @@ class Affogato(val token: String, val accountId: Long) {
    * @return Either[Respond, Edge]]
    *
    */
-  def set(subject: Point, verb: String, _object: Point): Either[Respond, Edge] = {
-    val edge = 
-      ("edge" -> 
-        ("subjectId" -> subject.identifier) ~
-        ("subjectType" -> subject._type) ~
-        ("objectId" -> _object.identifier) ~
-        ("objectType" -> _object._type) ~
-        ("verb" -> verb))
-
-    val addEdgeURI = uri(affogatoConf("mintpresso.url.edge").format(accountId))
-    implicit val req = url(addEdgeURI).POST
-    req << compact(render(edge))
-    req.addQueryParameter("api_token", token)     
-    req.addHeader("Content-Type", "application/json;charset=utf-8")    
-    req.setBodyEncoding("utf-8")
-
-    Request[Edge] { implicit status => json =>
-      Right(Edge(subject, verb, _object, "", 0))
-    }
+  def set(subject: Point, verb: String, _object: Point,
+          data: String): Either[Respond, Edge] = {
+    set(-1, subject._type, subject.identifier, verb,
+        -1, _object._type, _object.identifier, data)
   }
   /** Get a point by id
    *
@@ -770,6 +790,7 @@ class Affogato(val token: String, val accountId: Long) {
             _object("updatedAt").asInstanceOf[BigInt],
             _object("referencedAt").asInstanceOf[BigInt]
           ),
+          "",
           url,
           createdAt
         )
@@ -800,6 +821,7 @@ class Affogato(val token: String, val accountId: Long) {
             0,
             0
           ),
+          "",
           url,
           createdAt
         ) :: res
@@ -828,6 +850,17 @@ class AffogatoInvalidJsonException(message: String, nestedException: Throwable) 
  *
  */
 class AffogatoConversionException(message: String, nestedException: Throwable) extends Exception(message, nestedException) {
+    def this() = this("", null)
+     
+    def this(message: String) = this(message, null)
+     
+    def this(nestedException : Throwable) = this("", nestedException)
+}
+
+/**  Parameter Exception class. throw when Parameter is invalid
+ *
+ */
+class AffogatoInvalidParamException(message: String, nestedException: Throwable) extends Exception(message, nestedException) {
     def this() = this("", null)
      
     def this(message: String) = this(message, null)
