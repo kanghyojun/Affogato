@@ -394,7 +394,7 @@ class Affogato(val token: String, val accountId: Long) {
         verb,
         Point(-1, objectType, objectIdentifier, "", "", 0, 0, 0),
         "",
-        0,
+        0
       ))
     }
   }
@@ -705,7 +705,8 @@ class Affogato(val token: String, val accountId: Long) {
     val jNext = (json \ "next" \\ classOf[JString])
     val jCurrent = (json \ "current" \\ classOf[JString])
     val jSize = (json \ "size" \\ classOf[JInt])
-    var len = 0
+    var len: BigInt = 0
+    var size: BigInt = 0
     var current = ""
     var previous = ""
     var next = ""
@@ -720,13 +721,13 @@ class Affogato(val token: String, val accountId: Long) {
     var res: List[Edge] = List[Edge]()
 
     edges.values.asInstanceOf[List[Map[String, Any]]].map { edge =>
+      var verb = edge("verb").asInstanceOf[String]
+      var url = edge.get("url").getOrElse("").asInstanceOf[String]
+      var createdAt = edge("createdAt").asInstanceOf[BigInt]
       edge.get("subject").map { s =>
         val o = edge("object")
         val subject = s.asInstanceOf[Map[String, Any]] 
         val _object = o.asInstanceOf[Map[String, Any]]
-        var verb = edge("verb").asInstanceOf[String]
-        var url = edge.get("url").getOrElse("").asInstanceOf[String]
-        var createdAt = edge("createdAt").asInstanceOf[BigInt]
         val e: Edge = Edge(
           Point(
             subject("id").asInstanceOf[BigInt],
@@ -750,7 +751,7 @@ class Affogato(val token: String, val accountId: Long) {
             _object("referencedAt").asInstanceOf[BigInt]
           ),
           url,
-          createdAt,
+          createdAt
         )
         res = e :: res
       }.getOrElse{

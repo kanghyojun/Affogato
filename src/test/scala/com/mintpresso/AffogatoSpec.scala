@@ -16,10 +16,6 @@ class AffogatoSpec extends Specification {
     r.result.asInstanceOf[Either[Respond, Point]] must beRight
   }
   val resultEdgeMatcher = (r: AffogatoResult) => {
-    r.result.asInstanceOf[Either[Respond, Edge]] match {
-      case Left(a) => println(a.message)
-      case Right(_) => println("")
-    }
     r.result.asInstanceOf[Either[Respond, Edge]] must beRight
   }
   val resultListEdgeMatcher = (r: AffogatoResult) => {
@@ -157,7 +153,11 @@ class AffogatoSpec extends Specification {
         e = affogato.set(u, verb="listen", m)
       }
 
-      e must beRight
+      if(e == null) {
+        true === false
+      } else {
+        e must beRight
+      }
     }
 
     "be added with LinkedHashMap[String, String]" in {
