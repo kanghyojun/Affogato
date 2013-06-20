@@ -453,7 +453,7 @@ class Affogato(val token: String, val accountId: Long) {
    *
    * @param _type type of point
    * @param identifier identifier of point
-   * @return Either[Respond, Edge]
+   * @return Either[Respond, Point]
    *
    */
   def get(_type: String, identifier: String): Either[Respond, Point] = {
@@ -466,6 +466,41 @@ class Affogato(val token: String, val accountId: Long) {
 
     Request[Point] { implicit status => json =>
       Right(pointRead(json).head)
+    }
+  }
+
+  /** Get a point by type or identifier
+   *
+   * @param _type type of point
+   * @param identifier identifier of point
+   * @return Either[Respond, Points]
+   *
+   */
+  def getByTypeOrIdentifier(
+    _type: String, identifier: String,
+    limit: Long = 100, offset: Long = 0
+  ): Either[Respond, Points] = {
+    val getPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
+    implicit var req = url(getPointURI)
+    req.addQueryParameter("api_token", token)
+    if(_type != "?") {
+      req.addQueryParameter("type", _type)
+    }
+    if(identifier != "?") {
+      req.addQueryParameter("identifier", identifier)
+    }
+    req.addQueryParameter("limit", limit.toString)
+    req.addQueryParameter("offset", offset.toString)
+    req.addHeader("Accepts", "application/json;charset=utf-8")    
+
+    Request[Points] { implicit status => json =>
+      Right(Points(
+        List[Point](),
+        0,
+        "",
+        "",
+        ""
+      ))
     }
   }
 
