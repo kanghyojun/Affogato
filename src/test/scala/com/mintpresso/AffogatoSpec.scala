@@ -12,8 +12,9 @@ class AffogatoSpec extends Specification {
   val userIdentifier = "admire1"
   val bugsIdentifier = "bugs-identifier1"
   val eitherPointMatcher = (r: Either[Respond, Point]) => r must beRight
+  val eitherPointsMatcher = (r: Either[Respond, Points]) => r must beRight
   val resultPointMatcher = (r: AffogatoResult) => {
-    r.result.asInstanceOf[Either[Respond, Point]] must beRight
+    r.result.asInstanceOf[Either[Respond, Points]] must beRight
   }
   val resultEdgeMatcher = (r: AffogatoResult) => {
     r.result.asInstanceOf[Either[Respond, Edge]] must beRight
@@ -37,6 +38,8 @@ class AffogatoSpec extends Specification {
   }
 
   "Point" can {
+    sequential
+
     "be added" in {
       val affogato = Affogato(apiKey)
         
@@ -88,12 +91,7 @@ class AffogatoSpec extends Specification {
     "be found" in {
       val affogato = Affogato(apiKey)
       val res = affogato.get("foo", userIdentifier)
-      eitherPointMatcher(res)
-    }
-
-    "be found by id" in {
-      val affogato = Affogato(apiKey)
-      eitherPointMatcher(affogato.get("foo", userIdentifier))
+      eitherPointsMatcher(res)
     }
 
     "be found by LinkedHashMap[String, String]" in {

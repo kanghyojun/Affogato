@@ -221,12 +221,18 @@ class Affogato(val token: String, val accountId: Long) {
     Http(req OK as.String).either() match {
       case Right(r: String) => {
         val json = parse(r)
-        val status = statusRead(json).head
-        if(status._1 == 201 || status._1 == 200) {
-          f(status)(json)
+        var st = statusRead(json)
+        if(st.isEmpty) {
+          Left(new Respond(500, ""))
         } else {
-          Left(new Respond(status._1, status._2))
+          val status = st.head
+          if(status._1 == 201 || status._1 == 200) {
+            f(status)(json)
+          } else {
+            Left(new Respond(status._1, status._2))
+          }
         }
+        
       }
       case Left(err: StatusCode) => {
         val rawURL = req.build().getRawUrl
@@ -456,7 +462,7 @@ class Affogato(val token: String, val accountId: Long) {
    * @return Either[Respond, Point]
    *
    */
-  def get(_type: String, identifier: String): Either[Respond, Point] = {
+  def get(_type: String, identifier: String): Either[Respond, Points] = {
     val getPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
     implicit var req = url(getPointURI)
     req.addQueryParameter("api_token", token)
@@ -464,8 +470,8 @@ class Affogato(val token: String, val accountId: Long) {
     req.addQueryParameter("identifier", identifier)
     req.addHeader("Accepts", "application/json;charset=utf-8")    
 
-    Request[Point] { implicit status => json =>
-      Right(pointRead(json).head)
+    Request[Points] { implicit status => json =>
+      Right(points1Read(json))
     }
   }
 
@@ -673,6 +679,20 @@ class Affogato(val token: String, val accountId: Long) {
 
   override def toString(): String = "Affogato(%1$s, %2$s)".format(token , accountId)
   
+  private def points1Read(json: JValue)(implicit status: (BigInt, String)): Points = {
+    val points = for {
+      JField("point", JObject(point)) <- json
+      JField("id", JInt(i)) <- point
+      JField("type", JString(t)) <- point
+      JField("identifier", JString(iden)) <- point
+      JField("data", JObject(data)) <- point
+      JField("url", JString(u)) <- point
+      JField("createdAt", JInt(ca)) <- point
+      JField("updatedAt", JInt(ua)) <- point
+      JField("referencedAt", JInt(ra)) <- point
+    } yield Point(i, t, iden, compact(render(data)), u, ca, ua, ra)
+    Points(points.toList, 1, "", "", "")
+  }
   private def pointRead(json: JValue)(implicit status: (BigInt, String)): List[Point] = {
     val it = (for {
       JField("point", point) <- json
