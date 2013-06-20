@@ -23,12 +23,13 @@ class AffogatoSpec extends Specification {
     r.result.asInstanceOf[Either[Respond, Edge]] must beRight
   }
   val resultListEdgeMatcher = (r: AffogatoResult) => {
-    r.result.asInstanceOf[Either[Respond, List[Edge]]] match {
+    r.result.asInstanceOf[Either[Respond, Edges]] match {
       case Left(a) => println(a.message)
       case Right(_) => println("")
     }
-    r.result.asInstanceOf[Either[Respond, List[Edge]]] must beRight
+    r.result.asInstanceOf[Either[Respond, Edges]] must beRight
   }
+
   "Mintpresso API Pack" should {
     sequential
     
@@ -37,8 +38,10 @@ class AffogatoSpec extends Specification {
 
       affogato.accountId === accountId
     }
+  }
 
-    "Add a point" in {
+  "Point" can {
+    "be added" in {
       val affogato = Affogato(apiKey)
         
       val res = affogato.set(
@@ -48,8 +51,7 @@ class AffogatoSpec extends Specification {
       eitherPointMatcher(res)
     }
 
-
-    "Add a point with LinkedHashMap[String, String]" in {
+    "be added with LinkedHashMap[String, String]" in {
       val affogato = Affogato(apiKey)
 
       val res: AffogatoResult = affogato.set(LinkedHashMap[String, String](
@@ -59,7 +61,7 @@ class AffogatoSpec extends Specification {
       resultPointMatcher(res)
     }
 
-    "Add a point with LinkedHashMap[Symbol, String]" in {
+    "be added with LinkedHashMap[Symbol, String]" in {
       val affogato = Affogato(apiKey)
       val res = affogato.set(LinkedHashMap[Symbol, String](
         'foo  -> userIdentifier
@@ -68,7 +70,7 @@ class AffogatoSpec extends Specification {
       resultPointMatcher(res) 
     }
 
-    "Add a point with Point" in {
+    "be added with Point" in {
       val affogato = Affogato(apiKey)
 
       val res = affogato.set(Point(
@@ -87,32 +89,32 @@ class AffogatoSpec extends Specification {
       eitherPointMatcher(res)
     }
 
-    "Get a Point" in {
+    "be found" in {
       val affogato = Affogato(apiKey)
       val res = affogato.get("foo", userIdentifier)
       eitherPointMatcher(res)
     }
 
-    "Get a point by id" in {
+    "be found by id" in {
       val affogato = Affogato(apiKey)
       eitherPointMatcher(affogato.get("foo", userIdentifier))
     }
 
-    "Get a point by LinkedHashMap[String, String]" in {
+    "be found by LinkedHashMap[String, String]" in {
       val affogato = Affogato(apiKey)
       resultPointMatcher(affogato.get(
         LinkedHashMap[String, String]("foo" -> userIdentifier)
       ))
     }
 
-    "Get a point by LinkedHashMap[Symbol, String]" in {
+    "be found by LinkedHashMap[Symbol, String]" in {
       val affogato = Affogato(apiKey)
       resultPointMatcher(affogato.get(
         LinkedHashMap[Symbol, String]('foo -> userIdentifier)
       ))
     }
   
-    "Throw exception when data json is invalid" in {
+    "throw exception when data json is invalid" in {
       val invalidJson = """
       {
         "blah" : 1,
@@ -126,6 +128,7 @@ class AffogatoSpec extends Specification {
       ) must throwA[AffogatoInvalidJsonException]
     }
   }
+
   "Edge" can {
     sequential
     
