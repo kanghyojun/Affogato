@@ -456,6 +456,7 @@ class Affogato(val token: String, val accountId: Long) {
     req.addQueryParameter("api_token", token)
     req.addQueryParameter("type", _type)
     req.addQueryParameter("identifier", identifier)
+    req.addHeader("Accepts", "application/json;charset=utf-8")    
 
     Request[Point] { implicit status => json =>
       Right(pointRead(json).head)
@@ -472,6 +473,8 @@ class Affogato(val token: String, val accountId: Long) {
    * @param objectId id of object point
    * @param objectType type of object point
    * @param objectIdentifier identifier of object point
+   * @param limit limit of Edge result
+   * @param offset offset of Edge result
    * @param getInnerPoints getInnerPoints flag. if flag is true, edge data filled with real Point data.
    * @return Either[Respond, List[Edge]]
    *
@@ -479,7 +482,8 @@ class Affogato(val token: String, val accountId: Long) {
   def get(subjectId: Option[Long] = None, subjectType: String, 
           subjectIdentifier: String, verb: String,
           objectId: Option[Long] = None, objectType: String,
-          objectIdentifier: String, getInnerPoints: Boolean = true): Either[Respond, List[Edge]] = {
+          objectIdentifier: String, limit: Long = 100, offset: Long = 0,
+          getInnerPoints: Boolean = true): Either[Respond, List[Edge]] = {
     val getEdgeURI = uri(affogatoConf("mintpresso.url.edge").format(accountId))
     implicit val req = url(getEdgeURI)
     req.addQueryParameter("api_token", token)
@@ -493,6 +497,8 @@ class Affogato(val token: String, val accountId: Long) {
     req.addQueryParameter("objectType", objectType)
     req.addQueryParameter("verb", verb)
     req.addQueryParameter("getInnerPoints", getInnerPoints.toString)
+    req.addQueryParameter("limit", limit.toString)
+    req.addQueryParameter("offset", offset.toString)
 
     subjectId.map { sId =>
       req.addQueryParameter("subjectId", sId.toString) 
@@ -563,7 +569,16 @@ class Affogato(val token: String, val accountId: Long) {
    *          'verb -> "listen",
    *          'music -> "bugs-1"
    *        ))
-   * AffogatoResult[Either[Respond, Edge]] = AffogatoResult[Either[Respond, Edge]](Right[Point(...))
+   * AffogatoResult[Either[Respond, List[Edge]]] = AffogatoResult[Either[Respond, List[Edge]]](Right[Point(...))
+   *
+   * scala> affogato.get(LinkedHashMap[Symbol, String](
+   *          'user -> "admire93",
+   *          'verb -> "listen",
+   *          'music -> "bugs-1",
+   *          'limit -> "100",
+   *          'offset -> "0"
+   *        ), getInnerPoints=false)
+   * AffogatoResult[Either[Respond, List[Edge]]] = AffogatoResult[Either[Respond, List[Edge]]](Right[Point(...))
    *
    * }}}
    *
@@ -593,6 +608,8 @@ class Affogato(val token: String, val accountId: Long) {
       var oP: (String, String) = null
       var sId: (String, String) = null
       var oId: (String, String) = null
+      var limit: Long = 100
+      var offset: Long = 0
 
       var res: Either[Respond, List[Edge]] = null
 
@@ -613,13 +630,19 @@ class Affogato(val token: String, val accountId: Long) {
               oP = pair
             }
           }
-          case _ => throw new Exception("Unused data contained in data -"+pair)
+          case _ => pair._1 match {
+            case "limit" => limit = pair._2.toLong
+            case "offset" => offset = pair._2.toLong
+          }
         }
       }
+
       if(sP == null) {
-        res = get(Some(sId._2.toLong), "", "", verb, Some(oId._2.toLong), "", "", getInnerPoints)
+        res = get(Some(sId._2.toLong), "", "", verb, 
+                  Some(oId._2.toLong), "", "", limit, offset, getInnerPoints)
       } else {
-        res = get(None, sP._1, sP._2, verb, None, oP._1, oP._2, getInnerPoints)
+        res = get(None, sP._1, sP._2, verb, None, oP._1, oP._2,
+                  limit, offset, getInnerPoints)
       }
 
       AffogatoResult(res)
