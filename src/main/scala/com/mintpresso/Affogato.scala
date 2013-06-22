@@ -530,41 +530,6 @@ class Affogato(val token: String, val accountId: Long) {
     }
   }
 
-  /** Get a point by type or identifier
-   *
-   * @param _type type of point
-   * @param identifier identifier of point
-   * @return Either[Respond, Points]
-   *
-   */
-  def getByTypeOrIdentifier(
-    _type: String, identifier: String,
-    limit: Long = 100, offset: Long = 0
-  ): Either[Respond, Points] = {
-    val getPointURI = uri(affogatoConf("mintpresso.url.point").format(accountId))
-    implicit var req = url(getPointURI)
-    req.addQueryParameter("api_token", token)
-    if(_type != "?") {
-      req.addQueryParameter("type", _type)
-    }
-    if(identifier != "?") {
-      req.addQueryParameter("identifier", identifier)
-    }
-    req.addQueryParameter("limit", limit.toString)
-    req.addQueryParameter("offset", offset.toString)
-    req.addHeader("Accepts", "application/json;charset=utf-8")    
-
-    Request[Points] { implicit status => json =>
-      Right(Points(
-        List[Point](),
-        0,
-        "",
-        "",
-        ""
-      ))
-    }
-  }
-
   /** Get a edge from mintpresso
    *
    * @param subjectId id of subject point
