@@ -12,15 +12,30 @@ class AffogatoSpec extends Specification {
   val userIdentifier = "admire1"
   val bugsIdentifier = "bugs-identifier1"
   val eitherPointMatcher = (r: Either[Respond, Point]) => r must beRight
-  val eitherPointsMatcher = (r: Either[Respond, Points]) => r must beRight
+  val eitherPointsMatcher = (r: Either[Respond, Points]) => {
+    r must beRight.like {
+      case p: Points => {
+        println("points", p.points)
+        p.points.length must be_>(0)
+      }
+    }
+  }
+  val eitherEdgesMatcher = (r: Either[Respond, Edges]) => {
+    r must beRight.like {
+      case e: Edges => e.edges.length must be_>(0)
+    }
+  }
   val resultPointMatcher = (r: AffogatoResult) => {
-    r.result.asInstanceOf[Either[Respond, Points]] must beRight
+    r.result.asInstanceOf[Either[Respond, Point]] must beRight
+  }
+  val resultPointsMatcher = (r: AffogatoResult) => {
+    eitherPointsMatcher(r.result.asInstanceOf[Either[Respond, Points]])
   }
   val resultEdgeMatcher = (r: AffogatoResult) => {
     r.result.asInstanceOf[Either[Respond, Edge]] must beRight
   }
-  val resultListEdgeMatcher = (r: AffogatoResult) => {
-    r.result.asInstanceOf[Either[Respond, Edges]] must beRight
+  val resultEdgesMatcher = (r: AffogatoResult) => {
+    eitherEdgesMatcher(r.result.asInstanceOf[Either[Respond, Edges]])
   }
 
   "Mintpresso API Pack" should {
@@ -86,26 +101,38 @@ class AffogatoSpec extends Specification {
 
     "be found" in {
       val affogato = Affogato(apiKey)
-      val res = affogato.get("foo", userIdentifier)
+      val res = affogato.get("foo", userIdentifier, -1, -1)
       eitherPointsMatcher(res)
     }
 
     "be found by id" in {
       val affogato = Affogato(apiKey)
-      eitherPointMatcher(affogato.get("foo", userIdentifier))
+      affogato.get("foo", userIdentifier, -1, -1) match {
+        case Right(p) => {
+          eitherPointMatcher(affogato.get(p.points.head.id))
+        }
+        case Left(_) => false === true
+      }
     }
 
     "be found by LinkedHashMap[String, String]" in {
       val affogato = Affogato(apiKey)
-      resultPointMatcher(affogato.get(
+      resultPointsMatcher(affogato.get(
         LinkedHashMap[String, String]("foo" -> userIdentifier)
       ))
     }
 
     "be found by LinkedHashMap[Symbol, String]" in {
       val affogato = Affogato(apiKey)
-      resultPointMatcher(affogato.get(
+      resultPointsMatcher(affogato.get(
         LinkedHashMap[Symbol, String]('foo -> userIdentifier)
+      ))
+    }
+
+    "be found with `?`" in {
+      val affogato = Affogato(apiKey)
+      resultPointsMatcher(affogato.get(
+        LinkedHashMap[Symbol, String]('foo -> "?")
       ))
     }
   
@@ -179,25 +206,25 @@ class AffogatoSpec extends Specification {
 
     "be found" in {
       val affogato = Affogato(apiKey)
-      affogato.get(
+      eitherEdgesMatcher(affogato.get(
         subjectType="foo",
         subjectIdentifier=userIdentifier,
         verb="listen",
         objectType="barm",
         objectIdentifier=bugsIdentifier
-      ) must beRight
+      ))
     }
 
     "be found without inner point option" in {
       val affogato = Affogato(apiKey)
-      affogato.get(
+      eitherEdgesMatcher(affogato.get(
         subjectType="foo",
         subjectIdentifier=userIdentifier,
         verb="listen",
         objectType="barm",
         objectIdentifier=bugsIdentifier,
         getInnerPoints=false
-      ) must beRight
+      ))
     }
 
     "be found by LinkedHashMap[String, String]" in {
@@ -210,7 +237,7 @@ class AffogatoSpec extends Specification {
         )
       )
 
-      resultListEdgeMatcher(getRes)
+      resultEdgesMatcher(getRes)
     }
 
     "be found by LinkedHashMap[Symbol, String]" in {
@@ -223,7 +250,7 @@ class AffogatoSpec extends Specification {
         )
       )
 
-      resultListEdgeMatcher(getRes)
+      resultEdgesMatcher(getRes)
     }
     
     "be found with ?" in {
@@ -236,7 +263,7 @@ class AffogatoSpec extends Specification {
         objectType="barm",
         objectIdentifier=bugsIdentifier
       )
-      getRes must beRight
+      eitherEdgesMatcher(getRes)
     }
     
     "be found with limit, offset options" in {
@@ -245,13 +272,13 @@ class AffogatoSpec extends Specification {
       val e = affogato.get(None, "foo", userIdentifier,
                            "listen", None, "barm", "bugs-identifier1",
                            limit=100, offset=0)
-      e must beRight
+      eitherEdgesMatcher(e)
     }
 
     "be found with limit, offset by LinkedHashMap" in {
       val affogato = Affogato(apiKey)
       
-      resultListEdgeMatcher(affogato.get(LinkedHashMap(
+      resultEdgesMatcher(affogato.get(LinkedHashMap(
         "foo" -> userIdentifier,
         "verb" -> "listen",
         "barm" -> bugsIdentifier,
