@@ -15,7 +15,6 @@ class AffogatoSpec extends Specification {
   val eitherPointsMatcher = (r: Either[Respond, Points]) => {
     r must beRight.like {
       case p: Points => {
-        println("points", p.points)
         p.points.length must be_>(0)
       }
     }

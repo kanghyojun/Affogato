@@ -505,6 +505,7 @@ class Affogato(val token: String, val accountId: Long) {
       if(_type != "?" && identifier != "?") {
         Right(pointRead(json))
       } else {
+        println(json)
         Right(pointsRead(json))
       }
     }
@@ -696,7 +697,7 @@ class Affogato(val token: String, val accountId: Long) {
         JString(url) <- json \ "url"
         JInt(length) <- json \ "length"
         JInt(size) <- json \ "size"
-        JArray(point) <- json \\ "points"
+        JObject(point) <- json \ "points"
     } yield Points((for {
         JField("id", JInt(i)) <- point
         JField("type", JString(t)) <- point
@@ -706,6 +707,7 @@ class Affogato(val token: String, val accountId: Long) {
         JField("updatedAt", JInt(ua)) <- point
         JField("referencedAt", JInt(ra)) <- point
     } yield Point(i, t, iden, compact(render(data)), url, ca, ua, ra)), length, previous, current, next)
+    println(points)
 
     points.head
   }
