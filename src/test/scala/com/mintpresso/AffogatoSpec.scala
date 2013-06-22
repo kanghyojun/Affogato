@@ -12,23 +12,17 @@ class AffogatoSpec extends Specification {
   val userIdentifier = "admire1"
   val bugsIdentifier = "bugs-identifier1"
   val eitherPointMatcher = (r: Either[Respond, Point]) => r must beRight
+  val eitherPointsMatcher = (r: Either[Respond, Points]) => r must beRight
   val resultPointMatcher = (r: AffogatoResult) => {
-    r.result.asInstanceOf[Either[Respond, Point]] must beRight
+    r.result.asInstanceOf[Either[Respond, Points]] must beRight
   }
   val resultEdgeMatcher = (r: AffogatoResult) => {
-    r.result.asInstanceOf[Either[Respond, Edge]] match {
-      case Left(a) => println(a.message)
-      case Right(_) => println("")
-    }
     r.result.asInstanceOf[Either[Respond, Edge]] must beRight
   }
   val resultListEdgeMatcher = (r: AffogatoResult) => {
-    r.result.asInstanceOf[Either[Respond, List[Edge]]] match {
-      case Left(a) => println(a.message)
-      case Right(_) => println("")
-    }
-    r.result.asInstanceOf[Either[Respond, List[Edge]]] must beRight
+    r.result.asInstanceOf[Either[Respond, Edges]] must beRight
   }
+
   "Mintpresso API Pack" should {
     sequential
     
@@ -40,6 +34,8 @@ class AffogatoSpec extends Specification {
   }
 
   "Point" can {
+    sequential
+
     "be added" in {
       val affogato = Affogato(apiKey)
         
@@ -91,7 +87,7 @@ class AffogatoSpec extends Specification {
     "be found" in {
       val affogato = Affogato(apiKey)
       val res = affogato.get("foo", userIdentifier)
-      eitherPointMatcher(res)
+      eitherPointsMatcher(res)
     }
 
     "be found by id" in {
@@ -136,13 +132,8 @@ class AffogatoSpec extends Specification {
       affogato.set("foo", userIdentifier)
       affogato.set("barm", bugsIdentifier)
 
-      affogato.set(
-        subjectType="foo",
-        subjectIdentifier=userIdentifier,
-        verb="listen",
-        objectType="barm",
-        objectIdentifier=bugsIdentifier
-      ) must beRight
+      affogato.set(-1, "foo", userIdentifier, "listen",
+                   -1, "barm", bugsIdentifier, "{}") must beRight
     }
     
     "be added by class" in {
@@ -153,10 +144,14 @@ class AffogatoSpec extends Specification {
         u <- affogato.set("foo", userIdentifier).right;
         m <- affogato.set("barm", bugsIdentifier).right
       ) {
-        e = affogato.set(u, verb="listen", m)
+        e = affogato.set(u, verb="listen", m, "")
       }
 
-      e must beRight
+      if(e == null) {
+        true === false
+      } else {
+        e must beRight
+      }
     }
 
     "be added with LinkedHashMap[String, String]" in {
@@ -246,14 +241,6 @@ class AffogatoSpec extends Specification {
     
     "be found with limit, offset options" in {
       val affogato = Affogato(apiKey)
-
-      affogato.set(
-        subjectType="foo",
-        subjectIdentifier=userIdentifier,
-        verb="listen",
-        objectType="barm",
-        objectIdentifier=bugsIdentifier
-      ) must beRight
 
       val e = affogato.get(None, "foo", userIdentifier,
                            "listen", None, "barm", "bugs-identifier1",
