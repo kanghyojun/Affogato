@@ -570,6 +570,8 @@ class Affogato(val token: String, val accountId: Long) {
    * @param objectIdentifier identifier of object point
    * @param limit limit of Edge result
    * @param offset offset of Edge result
+   * @param newest order of Edge result one of [updated|created]
+   * @param oldest order of Edge result one of [updated|created]
    * @param getInnerPoints getInnerPoints flag. if flag is true, edge data filled with real Point data.
    * @return Either[Respond, Edges]
    *
