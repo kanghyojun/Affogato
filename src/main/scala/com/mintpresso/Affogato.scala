@@ -66,8 +66,21 @@ case class Point(id: BigInt, _type: String,
                  createdAt: BigInt, updatedAt: BigInt, 
                  referencedAt: BigInt) extends Respond
 
+/** Contain additional info for Point
+ *
+ * @param points list of [[com.mintpresso.Point]]
+ * @param len len 
+ * @param identifier mintpresso  point's identifier. identifier should be unique
+ * @param data mintpresso mintpresso point's additional data. json string
+ * @param url mintpresso mintpresso point's url
+ * @param updatedAt updated time, unix timestamp
+ * @param referencedAt referenced edges, unix timestamp
+ * @param createdAt created time, unixtimestamp
+ *
+ */
+
 case class Points(points: List[Point], len: BigInt, previous: String,
-                  current: String, next: String)
+                  current: String, next: String, size: BigInt)
 
 /** Represent a mintpresso edge. edge define realation between a points.
  *
@@ -505,7 +518,6 @@ class Affogato(val token: String, val accountId: Long) {
       if(_type != "?" && identifier != "?") {
         Right(pointRead(json))
       } else {
-        println(json)
         Right(pointsRead(json))
       }
     }
@@ -706,8 +718,7 @@ class Affogato(val token: String, val accountId: Long) {
         JField("createdAt", JInt(ca)) <- point
         JField("updatedAt", JInt(ua)) <- point
         JField("referencedAt", JInt(ra)) <- point
-    } yield Point(i, t, iden, compact(render(data)), url, ca, ua, ra)), length, previous, current, next)
-    println(points)
+    } yield Point(i, t, iden, compact(render(data)), url, ca, ua, ra)), length, previous, current, next, size)
 
     points.head
   }
@@ -741,7 +752,7 @@ class Affogato(val token: String, val accountId: Long) {
       JField("createdAt", JInt(ca)) <- point
       JField("updatedAt", JInt(ua)) <- point
       JField("referencedAt", JInt(ra)) <- point
-    } yield Point(i, t, iden, compact(render(data)), url, ca, ua, ra)), length, "", "", "")
+    } yield Point(i, t, iden, compact(render(data)), url, ca, ua, ra)), length, "", "", "", length)
 
     it.head
   }
