@@ -66,16 +66,14 @@ case class Point(id: BigInt, _type: String,
                  createdAt: BigInt, updatedAt: BigInt, 
                  referencedAt: BigInt) extends Respond
 
-/** Contain additional info for Point
+/** Contain additional information for Point
  *
  * @param points list of [[com.mintpresso.Point]]
- * @param len len 
- * @param identifier mintpresso  point's identifier. identifier should be unique
- * @param data mintpresso mintpresso point's additional data. json string
- * @param url mintpresso mintpresso point's url
- * @param updatedAt updated time, unix timestamp
- * @param referencedAt referenced edges, unix timestamp
- * @param createdAt created time, unixtimestamp
+ * @param len length of points
+ * @param previous previous points when limit & offset given
+ * @param current previous points when limit & offset given
+ * @param next next points when limit & offset given
+ * @param size total size of point found
  *
  */
 
@@ -95,6 +93,17 @@ case class Points(points: List[Point], len: BigInt, previous: String,
  */
 case class Edge(subject: Point, verb: String, _object: Point, data: String,
                 url: String, createdAt: BigInt) extends Respond
+
+/** Contain additional information about Edge
+ *
+ * @param edges list of [[com.mintpresso.Edge]]
+ * @param len length of edges`
+ * @param previous previous edges when limit & offset given
+ * @param current current edges when limit & offset given
+ * @param next next edges when limit & offset given
+ * @param size total size of edges found
+ *
+ */
 
 case class Edges(edges: List[Edge], len: BigInt,
                  previous: String, current: String,
@@ -386,17 +395,20 @@ class Affogato(val token: String, val accountId: Long) {
   /** Add a Edge to mintpresso
    *
    * {{{
-   * scala> affogato.set("user", "admire9@gmail.com", "listen", "music", "bugs-123")
+   * scala> affogato.set("user", "admire9@gmail.com", "listen", "music", "bugs-123", "{}")
    * Either[Respond, Edge] = Right(Edge(...))
    *
    * }}} 
    *
+   * @param subjectId id of subject point
    * @param subjectType type of subject point
    * @param subjectIdentifier identifier of subject point
    * @param verb describe about relation between subject point 
    *        and object point. (eg. person `listen` music)
+   * @param objectId id of object point
    * @param objectType type of object point
    * @param objectIdentifier identifier of object point
+   * @param data weight of edge or other additional data
    * @return Either[Respond, Edge]
    *
    */
@@ -455,14 +467,15 @@ class Affogato(val token: String, val accountId: Long) {
   /** Add a Edge to mintpresso by [[com.mintpresso.Point]]
    *
    * {{{
-   * scala> affogato.set(Point(...), "like", Point(...))
+   * scala> affogato.set(Point(...), "like", Point(...), "{}")
    * Either[Respond, Edge] = Right(Edge(...))
    *
-   * }}} 
+   * }}}
    *
    * @param subject [[com.mintpresso.Point]] that contains data about subject of realation
    * @param verb describe about relation between subject point and object point
    * @param _object [[com.mintpresso.Point]] that contains data about object of realation
+   * @param data additional data of point
    * @return Either[Respond, Edge]]
    *
    */
@@ -471,7 +484,14 @@ class Affogato(val token: String, val accountId: Long) {
     set(-1, subject._type, subject.identifier, verb,
         -1, _object._type, _object.identifier, data)
   }
+
   /** Get a point by id
+   *
+   * {{{
+   * scala> affogato.get(1234)
+   * Either[Respond, Point] = Right(Point(...))
+   *
+   * }}} 
    *
    * @param id id of point
    * @return Either[Respond, Point]
@@ -488,6 +508,21 @@ class Affogato(val token: String, val accountId: Long) {
   }
 
   /** Get a point by type or identifier
+   *
+   * {{{
+   * scala> val foo = affogato.get("foo", "bar", -1, -1)
+   * foo: Either[Respond, Points] = Right(Points(...))
+   *
+   * scala> for(p <- foo.right) println(p.points.head.identifier)
+   * foo
+   *
+   * scala> affogato.get("foo", "bar", 10, 5)
+   * Either[Respond, Points] = Right(Points(...))
+   *
+   * scala> for(p <- foo.right) println(p)
+   * Points(List[Point](Point(...), 5, "http://mintpresso.com...", "...", "...", 10)
+   *
+   * }}} 
    *
    * @param _type type of point
    * @param identifier identifier of point
