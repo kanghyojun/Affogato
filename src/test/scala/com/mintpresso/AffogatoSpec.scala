@@ -285,5 +285,32 @@ class AffogatoSpec extends Specification {
         "offset" -> 0.toString()
       ), false))
     }
+    
+    "be found with newest created" in {
+      val affogato = Affogato(apiKey)
+      val e = affogato.get(None, "foo", userIdentifier,
+                           "listen", None, "barm", "bugs-identifier1",
+                           limit=10, offset=0, newest="created")
+
+      e must beRight.like {
+        case e: Edges => {
+          e.edges.length must be_>(0)
+          e.edges.head.createdAt must be_<(e.edges(2).createdAt)
+        }
+      }
+    }
+    "be found with oldest created" in {
+      val affogato = Affogato(apiKey)
+      val e = affogato.get(None, "foo", userIdentifier,
+                           "listen", None, "barm", "bugs-identifier1",
+                           limit=10, offset=0, oldest="created")
+
+      e must beRight.like {
+        case e: Edges => {
+          e.edges.length must be_>(0)
+          e.edges.head.createdAt must be_>(e.edges(2).createdAt)
+        }
+      }
+    }
   }
 }

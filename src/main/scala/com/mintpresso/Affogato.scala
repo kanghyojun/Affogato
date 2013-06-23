@@ -578,6 +578,7 @@ class Affogato(val token: String, val accountId: Long) {
           subjectIdentifier: String, verb: String,
           objectId: Option[Long] = None, objectType: String,
           objectIdentifier: String, limit: Long = 100, offset: Long = 0,
+          oldest: String = "", newest: String = "",
           getInnerPoints: Boolean = true): Either[Respond, Edges] = {
     val getEdgeURI = uri(affogatoConf("mintpresso.url.edge").format(accountId))
     implicit val req = url(getEdgeURI)
@@ -594,6 +595,13 @@ class Affogato(val token: String, val accountId: Long) {
     req.addQueryParameter("getInnerPoints", getInnerPoints.toString)
     req.addQueryParameter("limit", limit.toString)
     req.addQueryParameter("offset", offset.toString)
+
+    if(newest.length != 0) {
+      req.addQueryParameter("newest", newest)
+    }
+    if(oldest.length != 0) {
+      req.addQueryParameter("oldest", oldest)
+    }
 
     subjectId.map { sId =>
       req.addQueryParameter("subjectId", sId.toString) 
@@ -644,13 +652,13 @@ class Affogato(val token: String, val accountId: Long) {
       var typeIdentifier: (String, String) = null
       var limit: Long = -1
       var offset: Long = -1
-
+      
       for((pair, index) <- stringMap.zipWithIndex) {
         index match {
           case 0 =>  typeIdentifier = pair
           case _ => pair._1 match {
             case "limit" => limit = pair._2.toLong
-            case "offset" => offset = pair._2.toLong
+            case "offset" => offset = pair._2.toLong 
           }
         }
       }
@@ -664,7 +672,8 @@ class Affogato(val token: String, val accountId: Long) {
       var oId: (String, String) = null
       var limit: Long = 10
       var offset: Long = 0
-
+      var newest = ""
+      var oldest = ""
       var res: Either[Respond, Edges] = null
 
       for((pair, index) <- stringMap.zipWithIndex) {
@@ -687,16 +696,19 @@ class Affogato(val token: String, val accountId: Long) {
           case _ => pair._1 match {
             case "limit" => limit = pair._2.toLong
             case "offset" => offset = pair._2.toLong
+            case "newest" => newest = pair._2
+            case "oldest" => oldest = pair._2
           }
         }
       }
 
       if(sP == null) {
         res = get(Some(sId._2.toLong), "", "", verb, 
-                  Some(oId._2.toLong), "", "", limit, offset, getInnerPoints)
+                  Some(oId._2.toLong), "", "", limit, offset, 
+                  oldest, newest, getInnerPoints)
       } else {
         res = get(None, sP._1, sP._2, verb, None, oP._1, oP._2,
-                  limit, offset, getInnerPoints)
+                  limit, offset, oldest, newest, getInnerPoints)
       }
 
       AffogatoResult(res)
