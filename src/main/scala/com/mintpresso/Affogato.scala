@@ -901,7 +901,8 @@ class Affogato(val token: String, val accountId: Long) {
         ) :: res
       }
     }
-    val es = Edges(res, len, previous, current, next, size)
+    val es = Edges(res.reverseIterator.toList, len, previous, 
+                   current, next, size)
     es.setStatus(status)
 
     return es

@@ -295,7 +295,7 @@ class AffogatoSpec extends Specification {
       e must beRight.like {
         case e: Edges => {
           e.edges.length must be_>(0)
-          e.edges.head.createdAt must be_<(e.edges(2).createdAt)
+          e.edges.head.createdAt must be_>(e.edges(2).createdAt)
         }
       }
     }
@@ -308,7 +308,7 @@ class AffogatoSpec extends Specification {
       e must beRight.like {
         case e: Edges => {
           e.edges.length must be_>(0)
-          e.edges.head.createdAt must be_>(e.edges(2).createdAt)
+          e.edges.head.createdAt must be_<(e.edges(2).createdAt)
         }
       }
     }
